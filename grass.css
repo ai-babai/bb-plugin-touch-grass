@@ -1,0 +1,74 @@
+/* Светлячок мини-игры «Погладить траву». Указатель не перехватывает. */
+.tg-firefly {
+  --e: 0;
+  position: absolute;
+  left: -100px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.tg-firefly.is-on { opacity: 1; }
+
+.tg-firefly-pulse {
+  position: absolute;
+  inset: 0;
+  animation: tg-firefly-pulse 2.8s ease-in-out infinite;
+}
+
+.tg-firefly-glow {
+  position: absolute;
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 238, 150, 1) 0 10%,
+    rgba(255, 190, 30, 0.75) 26%,
+    rgba(250, 170, 20, 0.3) 48%,
+    rgba(255, 190, 40, 0) 70%);
+  opacity: calc(0.6 + 0.4 * var(--e));
+  transform: scale(calc(0.65 + 0.95 * var(--e)));
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+/* Тельце светлячка: видно и на светлой теме. */
+.tg-firefly-glow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 4px;
+  margin: -2px 0 0 -1.5px;
+  border-radius: 50%;
+  background: #5c4c1a;
+  opacity: calc(0.9 - 0.5 * var(--e));
+}
+
+.tg-firefly.is-waking { animation: tg-firefly-away 1.6s ease-out forwards; }
+.tg-firefly.is-waking .tg-firefly-pulse { animation: none; }
+
+@keyframes tg-firefly-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes tg-firefly-away {
+  0% { transform: translate(0, 0); opacity: 1; }
+  35% { transform: translate(7px, -26px); opacity: 1; }
+  70% { transform: translate(-5px, -48px); opacity: 0.7; }
+  100% { transform: translate(4px, -70px); opacity: 0; }
+}
+@keyframes tg-firefly-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-firefly { transition: none; }
+  .tg-firefly-pulse { animation: none; }
+  .tg-firefly-glow { transition: none; }
+  .tg-firefly.is-waking { animation: tg-firefly-fade 0.9s ease-in forwards; }
+}
