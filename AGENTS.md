@@ -1,9 +1,9 @@
 ---
 type: Agent Instructions
-description: Вход в проект плагина «Погладить траву» и правила владельца для разработки.
+description: Entry points, development checks and the rollback branch for Touch Grass.
 created: "2026-11-22"
 ---
 
-# Погладить траву
+# Touch Grass
 
-Устройство и установка описаны в [README](README.md). Общие правила разработки и проверок — в [Personal OS](/Users/skif/personal-os/AGENTS.md).
+Start with the [project guide](README.md). The BB composer banner is registered in `app.tsx` and the activity RPC in `server.ts`. Use the [quality checks](docs/quality.md) when changing the plugin. Keep `archive/fireflies-v1` available as the original playable version.

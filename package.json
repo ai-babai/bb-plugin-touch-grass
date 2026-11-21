@@ -1,14 +1,15 @@
 {
   "name": "bb-plugin-touch-grass",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "bb": ">=0.50",
-    "bbPluginSdk": ">=0.6.157"
+    "bbPluginSdk": ">=0.6.157",
+    "node": "^22.15.0 || >=24"
   },
   "bb": {
-    "name": "Погладить траву",
-    "description": "В чате прорастает трава. С каждым новым сообщением она подрастает, а курсор пригибает стебли.",
+    "name": "Touch Grass",
+    "description": "A living meadow in each BB chat. Brush fireflies into bloom, meet butterflies, or mow a path through the grass.",
     "branding": {
       "icon": "Sprout"
     },
@@ -21,6 +22,28 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0"
-  }
+    "dpdm": "4.3.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.15.0",
+    "eslint-plugin-sonarjs": "4.2.2",
+    "fast-check": "4.11.0",
+    "istanbul-lib-instrument": "6.0.3",
+    "playwright-core": "1.65.1",
+    "react-dom": "19.3.1",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "8.73.0"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "scripts": {
+    "quality": "node scripts/quality.mjs",
+    "build": "bb plugin build"
+  },
+  "description": "An interactive meadow for BB chats.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ai-babai/bb-plugin-touch-grass.git"
+  },
+  "private": true
 }

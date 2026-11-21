@@ -1,23 +1,84 @@
 ---
 type: Project Guide
-description: Как растёт трава в чатах BB, как её погладить и установить плагин из исходников.
+description: Install and play Touch Grass in BB, see gameplay previews and run development checks.
 created: "2026-11-22"
 ---
 
-# Погладить траву
+# Touch Grass for BB
 
-В открытом чате над полем ввода растёт полоска травы. Проведи по ней курсором, чтобы пригнуть травинки. У каждого треда свой рисунок.
+[Русский](README.ru.md)
 
-Высота зависит от числа принятых сообщений, включая уточнения во время ответа. Для истории, где BB сохранил только начала ходов, плагин учитывает ходы. Первые сообщения дают самый заметный прирост. При 50 шагах диалога луг достигает полной высоты. При открытии старого чата плагин берёт его сохранённую историю, затем обновляется вместе с чатом. Архивные чаты со скрытым полем ввода не показывают луг.
+A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
-## Игра «Светлячки»
+![A mower crossing a mature meadow and leaving the flowers standing](docs/media/mower.gif)
 
-Через пару секунд после открытия чата в траве загорается сонный светлячок — тёплое мерцание у корней. Погладь траву прямо над ним курсором туда-сюда, без клика. От движения рядом он разгорается, а если остановиться, понемногу гаснет. Движение дальше 40 px от него не считается. Около двух секунд поглаживания будят светлячка. Он вспыхивает и улетает, трава расступается, а на его месте распускается ромашка, василёк, клевер или лютик.
+## Play
 
-Цветы остаются в луге этого треда и видны при следующем открытии чата. Их хранит localStorage браузера BB под ключом `bb-touch-grass:garden:<threadId>`. Через 3–7 секунд в свободном месте засыпает новый светлячок. В молодом чате на клумбе помещаются 3 цветка, с ростом луга — до 12. Когда клумба полна, новый светлячок появится после того, как чат подрастёт.
+| To… | Do this |
+| --- | --- |
+| Grow the meadow | Keep the conversation going. New inputs, including mid-turn messages, add height and density. The meadow reaches full height after 50 steps. |
+| Grow a flower | Brush back and forth over a glowing firefly. It takes off and leaves a daisy, cornflower, clover, buttercup or wild strawberry blossom. Each chat keeps its own flowers on this device. |
+| Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Tap the scythe again to put it away. |
+| Mow the whole lawn | Press the mower on the right. It cuts across the strip, spares flowers and leaves stubble that grows back in about a minute. |
+| Choose the size and visitors | Tap the sliders on the right to turn the meadow over. Choose **Compact** or **Tall**, and allow bees, butterflies or both. Tap the same spot to flip back. On a keyboard, press **Esc**. |
 
-При системной настройке «уменьшить движение» светлячок не мерцает и не улетает, а только разгорается и гаснет. Цветок появляется сразу.
+![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
 
-## Локальная установка
+With the scythe put away, swipe the grass with a finger to bend a wave of blades. They spring back when you let go.
 
-В каталоге проекта выполни `npm ci`, затем `bb plugin build` и `bb plugin install .`. Открой любой чат с полем ввода. Управление плагином доступно в настройках BB под именем «Погладить траву».
+![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
+
+Butterflies visit the grass. Once flowers bloom, bees can land on them. A bee landing on a wild strawberry blossom leaves a ripe red berry. It stays in this chat’s garden, even after mowing. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
+
+![Size and visitor settings on the reverse side of the meadow](docs/media/settings.png)
+
+## What shapes the grass?
+
+| Signal from the current chat | What you see |
+| --- | --- |
+| Accepted inputs or recorded turn starts | Taller, denser grass. Old chats open at their existing growth. |
+| Share of input tokens read from cache | More emerald blades at high cache reuse, more straw tones at low reuse. Providers that haven't reported usage yet get the base palette. |
+| Tool calls among the last 24 started items | More bee visits when flowers are present. Activity reaches its maximum at 12 calls. |
+
+Growth follows conversation steps. Five steps give about 29% of the journey from sprouts to mature grass, 20 give 67%, and 50 give 100%. Leaving the chat open keeps its grass at the same height. Each thread has its own blade pattern.
+
+The plugin reads BB’s local event log. The server sends the meadow two numbers for cache and tool activity. Flowers are stored per thread in this BB client. Size and visitor preferences apply across chats. Controls use English by default and Russian in a Russian-language BB document.
+
+## Install
+
+Use BB 0.50 or later and Node.js 22.15+ (22.x) or 24+. The repository currently requires GitHub access.
+
+```sh
+gh repo clone ai-babai/bb-plugin-touch-grass
+cd bb-plugin-touch-grass
+npm ci
+bb plugin build
+bb plugin install .
+```
+
+Open a chat with a visible composer. After editing, run `npm run build` and `bb plugin reload touch-grass`.
+
+## Development
+
+Run the checks before pushing:
+
+```sh
+npm run quality
+```
+
+The browser tests use Chrome on macOS. On Linux install Chromium with `npx playwright-core install chromium` or set `CHROME_PATH`. The suite exercises the UI in a browser with simulated BB events. It does not need access to a BB account.
+
+The quality gate checks TypeScript, function complexity, dependency cycles, coverage of changed executable lines, CRAP scores, property-based tests and selected mutations. Its default comparison is the original meadow. To review a different change, pass a baseline, for example `npm run quality -- --base origin/main`. Details and thresholds are in the [quality guide](docs/quality.md).
+
+## Original meadow
+
+The original firefly game is preserved on [`archive/fireflies-v1`](https://github.com/ai-babai/bb-plugin-touch-grass/tree/archive/fireflies-v1) at `388d564`. From a clean checkout, switch the installed plugin back with:
+
+```sh
+git switch archive/fireflies-v1
+npm ci
+bb plugin build
+bb plugin reload touch-grass
+```
+
+Use `git switch main` and repeat the last three commands to return. Both versions read the same saved flower garden.

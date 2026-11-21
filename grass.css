@@ -72,3 +72,207 @@
   .tg-firefly-glow { transition: none; }
   .tg-firefly.is-waking { animation: tg-firefly-fade 0.9s ease-in forwards; }
 }
+
+/* Оболочка луга. --tg-box — высота полосы травы (её задаёт движок);
+   кнопки прижаты к низу, поэтому их центры не зависят от высоты полосы. */
+.tg-meadow {
+  --tg-hit: 26px;   /* цель нажатия на ПК */
+  --tg-plate: 22px; /* видимая подложка кнопки */
+  --tg-edge: 2px;   /* отступ кнопок от низа и боков */
+  --tg-gap: 4px;
+  position: relative;
+  width: 100%;
+  height: var(--tg-box, 18px);
+  min-height: calc(var(--tg-hit) + 2 * var(--tg-edge));
+  background: transparent;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: visible; /* улетающий светлячок может выйти за полосу, указатель он не ловит */
+  contain: size layout style;
+}
+/* Сенсорный экран: цели не меньше 44×44, зелень остаётся компактной у низа полосы. */
+@media (pointer: coarse), (hover: none) {
+  .tg-meadow { --tg-hit: 44px; --tg-plate: 30px; }
+}
+
+.tg-canvas {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  display: block;
+}
+
+/* Карточка луга: лицевая сторона — трава, обратная — настройки. */
+.tg-card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: perspective(700px) rotateX(0deg);
+  transition: transform 0.5s cubic-bezier(0.25, 0.75, 0.3, 1);
+}
+.tg-meadow.is-flipped .tg-card { transform: perspective(700px) rotateX(180deg); }
+.tg-face {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+/* Появляющаяся сторона видна сразу, уходящая прячется к середине переворота. */
+.tg-back {
+  transform: rotateX(180deg);
+  visibility: hidden;
+  transition: visibility 0s linear 0.25s;
+}
+.tg-front { visibility: visible; transition: visibility 0s linear 0s; }
+.tg-meadow.is-flipped .tg-back { visibility: visible; transition-delay: 0s; }
+.tg-meadow.is-flipped .tg-front { visibility: hidden; transition-delay: 0.25s; }
+
+/* Касание травы: вертикальный свайп прокручивает чат, горизонтальный гладит траву.
+   В режиме косы — только здесь — касание целиком отдаётся косе. */
+.tg-front { touch-action: pan-y; }
+.tg-meadow.is-scything .tg-front {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Кнопки: прозрачная цель нажатия, внутри — небольшая подложка с иконкой.
+   Коса слева, газонокосилка и настройки справа; цели не перекрываются. */
+.tg-button {
+  position: absolute;
+  bottom: var(--tg-edge);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tg-hit);
+  height: var(--tg-hit);
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted-foreground, #7a7f73);
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease;
+}
+.tg-icon {
+  display: block;
+  box-sizing: border-box;
+  width: var(--tg-plate);
+  height: var(--tg-plate);
+  padding: calc(var(--tg-plate) * 0.17);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--background, #fff) 80%, transparent);
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.tg-button:hover { color: var(--foreground, #2c3328); }
+.tg-button:focus-visible { outline: none; }
+.tg-button:focus-visible .tg-icon,
+.tg-chip:focus-visible::before {
+  outline: 1.5px solid var(--ring, #5b8a4d);
+  outline-offset: 1px;
+}
+
+.tg-scythe { left: var(--tg-edge); }
+.tg-mow { right: calc(var(--tg-edge) + var(--tg-hit) + var(--tg-gap)); }
+.tg-toggle { right: var(--tg-edge); }
+
+/* Keep the resting tool quiet and the active mode clearly visible. */
+.tg-scythe { color: var(--muted-foreground, #657464); }
+.tg-scythe .tg-blade { fill: currentColor; }
+.tg-scythe .tg-icon {
+  padding: calc(var(--tg-plate) * 0.14);
+}
+.tg-scythe[aria-pressed="true"] { color: #fff; }
+.tg-scythe[aria-pressed="true"] .tg-blade { fill: #e8f1e4; }
+.tg-scythe[aria-pressed="true"] .tg-icon {
+  background: #4f8a3f;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #4f8a3f 35%, transparent);
+}
+
+/* Газонокосилка на ПК появляется при наведении или фокусе, настройки видны всегда. */
+.tg-mow { opacity: 0; }
+.tg-meadow:hover .tg-mow,
+.tg-mow:focus-visible { opacity: 1; }
+.tg-toggle { opacity: 0.65; }
+.tg-meadow:hover .tg-toggle,
+.tg-meadow.is-flipped .tg-toggle,
+.tg-toggle:focus-visible { opacity: 1; }
+@media (pointer: coarse), (hover: none) {
+  .tg-mow, .tg-toggle { opacity: 1; }
+}
+
+/* Обратная сторона: одна строка настроек; справа место под общую кнопку «назад». */
+.tg-back {
+  container-type: inline-size;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 0 calc(var(--tg-edge) + var(--tg-hit) + var(--tg-gap)) var(--tg-edge) 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  font: 500 11px/1 system-ui, -apple-system, sans-serif;
+  color: var(--muted-foreground, #6f746a);
+  border-radius: 8px;
+  background: color-mix(in srgb, #5b8a4d 9%, var(--background, #fff));
+}
+.tg-set {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  height: var(--tg-hit);
+}
+.tg-caption { margin-right: 3px; }
+/* Цель чипа — во всю высоту кнопки, рамка — подложка внутри. */
+.tg-chip {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: var(--tg-hit);
+  height: var(--tg-hit);
+  padding: 0 8px;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.tg-chip::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--tg-hit) - var(--tg-plate)) / 2) 1px;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--foreground, #222) 14%, transparent);
+  border-radius: 999px;
+}
+.tg-chip:focus-visible { outline: none; }
+.tg-chip:hover { color: var(--foreground, #2c3328); }
+.tg-chip[aria-pressed="true"] { color: var(--foreground, #2c3328); }
+.tg-chip[aria-pressed="true"]::before {
+  border-color: color-mix(in srgb, #5b8a4d 55%, transparent);
+  background: color-mix(in srgb, #5b8a4d 18%, var(--background, #fff));
+}
+.tg-guest[aria-pressed="false"] .tg-chip-label { text-decoration: line-through; opacity: 0.7; }
+
+@container (max-width: 380px) {
+  .tg-caption, .tg-chip-label { display: none; }
+  .tg-back { gap: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-button, .tg-icon { transition: none; }
+  /* Без переворота: стороны просто сменяются. */
+  .tg-card, .tg-meadow.is-flipped .tg-card { transform: none; transition: none; }
+  .tg-back { transform: none; transition: none; }
+  .tg-front { transition: none; }
+}

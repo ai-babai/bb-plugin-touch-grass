@@ -1,12 +1,15 @@
+import { changedActivity } from "./activity-events";
 import { useEffect, useState } from "react";
 import { definePluginApp, useComposer, useSdk } from "@get-bb/plugin-sdk/app";
 import { Grass } from "./Grass";
+import { useMeadowActivity } from "./useMeadowActivity";
 
 // One bounded BB query can return up to 100 events across both event types.
 const matureAt = 50;
 
 function ThreadMeadow({ threadId }: { threadId: string }) {
   const sdk = useSdk();
+  const activity = useMeadowActivity(threadId);
   const [growth, setGrowth] = useState<number | null>(null);
 
   useEffect(() => {
@@ -38,13 +41,7 @@ function ThreadMeadow({ threadId }: { threadId: string }) {
       event: "thread:changed",
       threadId,
       callback(change) {
-        const types = change.metadata?.eventTypes;
-        if (types?.includes("turn/started") || types?.includes("turn/input/accepted") ||
-            change.changes.includes("history-rewritten") ||
-            change.changes.includes("history-compacted") ||
-            (change.changes.includes("status-changed") && !change.metadata?.eventTypes)) {
-          void refresh();
-        }
+        if (changedActivity(change, ["turn/started", "turn/input/accepted"])) void refresh();
       },
     });
     const reconnect = sdk.subscribe({
@@ -61,7 +58,7 @@ function ThreadMeadow({ threadId }: { threadId: string }) {
     };
   }, [sdk, threadId]);
 
-  return growth === null ? null : <Grass threadId={threadId} growth={growth} />;
+  return growth === null ? null : <Grass threadId={threadId} growth={growth} {...activity} />;
 }
 
 function MeadowBanner() {
