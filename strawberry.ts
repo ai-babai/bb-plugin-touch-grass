@@ -18,7 +18,7 @@ export type BushShape = { x: number; headX: number; headY: number; r: number; st
 
 /** Кустик ниже цветов: невысокий, а «головка» — верхний трилистник, на него садится пчела. */
 export function bushShape(x: number, ground: number, full: number, shown: number, open: number, bend: number): BushShape {
-  const stem = Math.max(7, full * 0.3) * (0.45 + 0.55 * open);
+  const stem = Math.max(7, Math.min(32, full * 0.3)) * (0.45 + 0.55 * open);
   return {
     x, stem, bend, open,
     headX: x + bend * stem * 0.35,

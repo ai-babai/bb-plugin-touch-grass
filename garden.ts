@@ -1,3 +1,4 @@
+import { clearBehind, drawLeaves, type Stem, stemLength } from "./flower-art";
 import { bushShape, drawStrawberryBush, LEAF, STRAWBERRY } from "./strawberry";
 
 export const BLOOM_MS = 800;
@@ -66,9 +67,9 @@ export function flowerShape(f: Flower, width: number, full: number, ground: numb
   const x = f.at * width;
   const bloom = f.born ? Math.min(1, (now - f.born) / BLOOM_MS) : 1;
   const open = 1 - Math.pow(1 - bloom, 3);
-  const stem = Math.max(10, full * 0.6) * (0.45 + 0.55 * open);
   const bend = Math.max(-1, Math.min(1, f.bend));
   if (f.kind === STRAWBERRY) return bushShape(x, ground, full, shown, open, bend);
+  const stem = stemLength(f.kind, f.at, full) * (0.45 + 0.55 * open);
   return {
     x, stem, bend, open,
     headX: x + bend * stem * 0.5,
@@ -112,12 +113,15 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
       drawStrawberryBush(ctx, shape, ground, f.at, f.ripe, now, dark);
       continue;
     }
+    const curve: Stem = { x, ground, cx: x + bend * stem * 0.1, cy: ground - stem * 0.5, headX, headY, len: stem, bend };
+    clearBehind(ctx, curve, r);
     ctx.beginPath();
     ctx.moveTo(x, ground + 0.5);
-    ctx.quadraticCurveTo(x + bend * stem * 0.1, ground - stem * 0.5, headX, headY);
-    ctx.strokeStyle = dark ? "hsla(105, 32%, 38%, 0.9)" : "hsla(105, 38%, 34%, 0.95)";
-    ctx.lineWidth = 1.1;
+    ctx.quadraticCurveTo(curve.cx, curve.cy, headX, headY);
+    ctx.strokeStyle = dark ? "hsla(105, 32%, 42%, 0.95)" : "hsla(105, 38%, 32%, 0.95)";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
+    drawLeaves(ctx, f.kind, curve, shape.open, dark);
     f.hx = headX;
     f.hy = headY;
     const kind = FLOWER_KINDS[f.kind];
@@ -127,10 +131,13 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
     ctx.rotate(bend * 0.6 + x * 0.37);
     ctx.globalAlpha = dark ? 0.9 : 1;
     ctx.fillStyle = kind.petal;
+    ctx.strokeStyle = "rgba(57, 69, 45, 0.40)";
+    ctx.lineWidth = 0.55;
     for (let i = 0; i < kind.n; i++) {
       ctx.rotate((Math.PI * 2) / kind.n);
       ctx.beginPath();
       ctx.ellipse(0, -r * kind.long * 0.55, r * kind.wide * 0.55, r * kind.long * 0.55, 0, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.fill();
     }
     ctx.beginPath();

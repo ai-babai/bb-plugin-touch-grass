@@ -27,6 +27,27 @@ async function stroke(m, from, to, above) {
 const petals = async m => (await m.seen([DAISY, CORNFLOWER, BUTTERCUP])).map(p => p.x);
 
 export default [
+  ["wildflowers form a low, varied border and a mobile scythe can cut one above short grass", ctx =>
+    withMeadow(ctx, {
+      ...bed([]), size: "overgrown", viewport: { width: 390, height: 790 },
+      isMobile: true, hasTouch: true, reducedMotion: "reduce",
+      storage: { [KEY.guests]: '{"bee":false,"butterfly":false}',
+        [KEY.garden]: JSON.stringify([0, 1, 2, 3].map((kind, i) => ({ kind, at: 0.2 + i * 0.18 }))) },
+    }, async m => {
+      const box = await m.box();
+      const heads = await m.seen(COLORS.petals);
+      assert.equal(heads.length, 4);
+      const heights = heads.map(head => box.height - head.y);
+      assert.ok(Math.max(...heights) < box.height / 3, `low flowers in tall grass: ${heights}`);
+      assert.ok(Math.max(...heights) - Math.min(...heights) > 3, `different plant heights: ${heights}`);
+      await m.scytheButton.tap();
+      const cornflower = heads[1];
+      await m.page.touchscreen.tap(box.x + cornflower.x, box.y + cornflower.y);
+      assert.deepEqual((await m.garden()).map(plant => plant.kind), [0, 2, 3]);
+      await m.reload();
+      assert.deepEqual((await m.garden()).map(plant => plant.kind), [0, 2, 3]);
+    })],
+
   ["the scythe cuts only the flower its blade crosses; above and beside it are spared; reload keeps the bed", ctx =>
     withMeadow(ctx, bed([{ at: 0.3, kind: 0 }, { at: 0.5, kind: 1 }, { at: 0.7, kind: 3 }], { reducedMotion: "reduce" }), async m => {
       const bloom = await petals(m);
