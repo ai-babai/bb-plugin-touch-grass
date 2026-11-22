@@ -20,8 +20,8 @@ const LEAF_MARGIN_PX = 1; // край листа: лезвие, задевшее
 const STALK_HALF_PX = 1.5;
 
 /** Видимые части растения кроме стебля и головки цветка — та же раскладка, что у рисунка. */
-export function plantParts(plant: { kind: number; at: number }, shape: FlowerShape, ground: number): { ovals: Oval[]; stalks: Stalk[] } {
-  if (plant.kind === STRAWBERRY) return bushParts(shape, ground, plant.at);
+export function plantParts(plant: { kind: number; at: number; ripe?: number }, shape: FlowerShape, ground: number): { ovals: Oval[]; stalks: Stalk[] } {
+  if (plant.kind === STRAWBERRY) return bushParts(shape, ground, plant.at, plant.ripe);
   const ovals = plant.kind === DANDELION
     ? rosetteOvals(shape.x, ground, rosetteSize(shape.stem, shape.leaf), shape.bend)
     : leafOvals(plant.kind, stemOf(shape, ground), shape.leaf);
@@ -77,7 +77,7 @@ function segmentsDistance(a: Point, b: Point, c: Point, d: Point) {
 }
 
 /** Лезвие прошло от a к b (точка, если не двигалось): задело ли оно растение — стебель, головку или лист. */
-export function scytheHitsFlower(plant: { kind: number; at: number }, shape: FlowerShape, ground: number, a: Point, b: Point) {
+export function scytheHitsFlower(plant: { kind: number; at: number; ripe?: number }, shape: FlowerShape, ground: number, a: Point, b: Point) {
   if (pointToSegment({ x: shape.headX, y: shape.headY }, a, b) <= shape.r + HEAD_MARGIN_PX) return true;
   // Follow the same quadratic as the painted stem, including when it bends under a finger.
   const stem = stemOf(shape, ground);

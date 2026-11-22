@@ -35,7 +35,7 @@ export function bushShape(x: number, ground: number, full: number, shown: number
  */
 export function blossomOf(s: BushShape, at: number) {
   const side = Math.sin(at * 91.7) > 0 ? 1 : -1;
-  return { x: s.headX + side * s.r * 0.7, y: s.headY - s.r * 0.95, size: Math.max(1.2, s.r * 0.42) };
+  return { x: s.headX + side * s.r * 0.8, y: s.headY - s.r * 1.9, size: Math.max(1.5, s.r * 0.55) };
 }
 
 /** Насколько виден цветочек: 1 — до опыления, затем вянет; 0 — ягоды уже спелые. */
@@ -152,10 +152,15 @@ type Oval = { x: number; y: number; rx: number; ry: number; rot: number };
 type Stalk = { x0: number; y0: number; cx: number; cy: number; x1: number; y1: number };
 
 /** Видимые части кустика: листочки и ягоды как эллипсы, черешки как кривые, px холста. */
-export function bushParts(s: BushShape, ground: number, at: number) {
+export function bushParts(s: BushShape, ground: number, at: number, ripe?: number) {
   const ovals: Oval[] = [];
   const stalks: Stalk[] = [];
   if (s.r < 0.3) return { ovals, stalks };
+  if (blossomFade(ripe, performance.now()) > 0.15) {
+    const b = blossomOf(s, at);
+    stalks.push({ x0: s.x, y0: ground, cx: (s.x + b.x) / 2, cy: b.y + s.stem * 0.2, x1: b.x, y1: b.y });
+    ovals.push({ x: b.x, y: b.y, rx: b.size, ry: b.size, rot: 0 });
+  }
   const { leaves, berries } = bushLayout(s, ground, at);
   for (const l of leaves) {
     stalks.push({ x0: s.x, y0: ground, cx: (s.x + l.tx) / 2, cy: l.ty + s.stem * 0.15, x1: l.tx, y1: l.ty });
