@@ -5,7 +5,7 @@ import type { MeadowCardState } from "./useMeadowCard";
 
 /**
  * Часы «Зарослей» над перевёрнутой карточкой: нативный range выбирает время
- * отрастания — любую целую минуту на шкале с опорами 5 / 20 / 40 / 80 (regrow-scale),
+ * отрастания — любую целую минуту на шкале с опорами 5 / 15 / 40 / 90 (regrow-scale),
  * ниже — отдельно — сколько осталось до зрелости.
  */
 
@@ -80,7 +80,6 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
           value={units}
           aria-valuemin={REGROW_MIN}
           aria-valuemax={REGROW_MAX}
-          aria-valuenow={minutes} // value — деления шкалы, а читается минута
           aria-valuenow={minutes}
           aria-valuetext={`${minutes} ${copy.mins}`}
           style={{ "--tg-fill": fill } as CSSProperties}
