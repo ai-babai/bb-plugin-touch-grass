@@ -20,7 +20,8 @@ export default [
     assert.deepEqual(heights.reduce, [grown, grown], "reduced motion: full height from the first frame");
   }],
 
-  ["brushed grass sways and comes back exactly to rest", ctx => withMeadow(ctx, { rows: turns(40), storage: noGuests }, async m => {
+  ["brushed grass sways and comes back exactly to rest", ctx => withMeadow(ctx, { rows: turns(40), random: 0.01, storage: noGuests }, async m => {
+    // Keep the firefly outside this stroke so the return to rest measures grass alone.
     const rest = await m.pixels();
     const box = await m.box();
     const y = box.y + box.height * 0.7;

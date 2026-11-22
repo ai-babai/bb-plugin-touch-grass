@@ -30,6 +30,13 @@ With the scythe put away, swipe up or down over the grass to scroll the chat. Pr
 
 ![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
 
+
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/wildflowers-dark.png">
+  <img src="docs/media/wildflowers.png" alt="Daisy, cornflower, clover, buttercup and wild strawberry in a freshly cut meadow" width="600">
+</picture>
+
 Butterflies visit the grass. Once flowers bloom, bees can land on them. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
 
 ![Mobile meadow settings with the growth slider, countdown and Grow now button](docs/media/settings.png)
