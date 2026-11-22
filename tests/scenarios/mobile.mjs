@@ -1,6 +1,6 @@
 // Phone: touch targets, tapping the buttons, mowing with a finger, scrolling stays free.
 import assert from "node:assert/strict";
-import { COLORS, KEY, turns, withMeadow } from "../harness/meadow.mjs";
+import { awaitFirefly, COLORS, KEY, NO_BLOOM, turns, withMeadow } from "../harness/meadow.mjs";
 
 const phone = {
   viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
@@ -45,10 +45,11 @@ export default [
   })],
   ["a sleeping firefly can be brushed between the phone controls", ctx => withMeadow(ctx, {
     ...phone, scope: { kind: "project" }, waitFor: "none",
-    storage: { ...phone.storage, [KEY.garden]: JSON.stringify([.42, .43, .44].map(at => ({ at, kind: 1 }))) },
+    storage: { ...phone.storage, ...NO_BLOOM(), [KEY.garden]: JSON.stringify([.42, .43, .44].map(at => ({ at, kind: 1 }))) },
   }, async m => {
     await m.bb(() => { Math.random = () => .99; window.bb.setScope({ kind: "thread", threadId: "thr_meadow" }); });
-    await m.ready(2300);
+    await m.ready(2000);
+    await awaitFirefly(m);
     const glow = await m.root.locator(".tg-firefly.is-on .tg-firefly-glow").boundingBox();
     assert.ok(glow);
     const x = glow.x + glow.width / 2;

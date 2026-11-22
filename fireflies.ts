@@ -108,7 +108,7 @@ export function createFireflies(host: Habitat) {
       firefly = null;
       flyEl.classList.remove("is-on", "is-waking");
       showEnergy();
-      queueFirefly(3500 + Math.random() * 3000);
+      queueFirefly(40_000 + Math.random() * 30_000); // следующий — редкий гость, через 40–70 с
     }, host.read().reduced ? 900 : FLY_MS);
   };
 

@@ -32,30 +32,28 @@ function useNow(until: number) {
   return now;
 }
 
-function Status({ readyAt, now, onGrowNow }: { readyAt: number; now: number; onGrowNow(): void }) {
-  if (now >= readyAt) {
-    return <span className="tg-timer-status is-grown" role="timer" aria-live="off">{copy.grown}</span>;
-  }
+function Status({ readyAt, flowerDeadline, now, onGrowNow }: { readyAt: number; flowerDeadline: number; now: number; onGrowNow(): void }) {
   return (
     <>
+      {now >= readyAt ? <span className="tg-timer-status is-grown" role="timer" aria-live="off">{copy.grown}</span> :
       <span className="tg-timer-status" role="timer" aria-live="off">
         <span className="tg-timer-status-label">{copy.timeLeft}</span>
         <span className="tg-timer-clock">{timeLeft(readyAt, now)}</span>
-      </span>
-      <button type="button" className="tg-grow-now" onClick={onGrowNow}>
+      </span>}
+      {now < Math.max(readyAt, flowerDeadline) && <button type="button" className="tg-grow-now" onClick={onGrowNow}>
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path d="M8 14.5V7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
           <path d="M8 8.5C8 5.6 6 4 2.8 4 2.8 7 4.8 8.5 8 8.5ZM8 7C8 4 10 2 13.4 2 13.4 5.2 11.2 7 8 7Z" fill="currentColor" />
         </svg>
         {copy.growNow}
-      </button>
+      </button>}
     </>
   );
 }
 
 export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(): void }) {
   const id = useId();
-  const now = useNow(ui.readyAt);
+  const now = useNow(Math.max(ui.readyAt, ui.flowerDeadline));
   const minutes = ui.regrowMinutes;
   const fill = `${((minutes - MIN) / (MAX - MIN)) * 100}%`;
 
@@ -86,7 +84,7 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
       </div>
       {/* Время до зрелости и действие — отдельной строкой от выбранной длительности. */}
       <div className="tg-timer-foot">
-        <Status readyAt={ui.readyAt} now={now} onGrowNow={onGrowNow} />
+        <Status readyAt={ui.readyAt} flowerDeadline={ui.flowerDeadline} now={now} onGrowNow={onGrowNow} />
       </div>
     </div>
   );

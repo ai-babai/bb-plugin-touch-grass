@@ -5,18 +5,19 @@ import { CLOCK_START, COLORS, KEY, THREAD, turns, withMeadow } from "../harness/
 const plants = [0, 1, 2, 3].map((kind, i) => ({ kind, at: 0.2 + i * 0.18 }));
 const colors = COLORS.petals.map(petal => Number.parseInt(petal.slice(1), 16));
 
-async function meadowPixels(ctx, minutes) {
+async function meadowPixels(ctx, cut) {
   let result;
   await withMeadow(ctx, {
     size: "overgrown", rows: turns(50), random: 0.15, reducedMotion: "reduce",
     viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
     storage: {
       [KEY.garden]: JSON.stringify(plants), [KEY.guests]: '{"bee":false,"butterfly":false}',
-      [`bb-touch-grass:overgrown:${THREAD}`]: JSON.stringify({ v: 1, p: 40, s: CLOCK_START - minutes * 60_000, c: [] }),
+      [`bb-touch-grass:overgrown:${THREAD}`]: JSON.stringify({ v: 1, p: 40, s: CLOCK_START - 41 * 60_000,
+        c: cut ? Array.from({ length: 50 }, (_, i) => [i + 4, 41 * 60]) : [] }),
     },
   }, async m => {
     result = await m.canvas.evaluate(canvas => {
-      const height = Math.min(180, canvas.height);
+      const height = canvas.height;
       const { data } = canvas.getContext("2d").getImageData(0, canvas.height - height, canvas.width, height);
       return Array.from({ length: canvas.width * height }, (_, i) => {
         const index = i * 4;
@@ -31,8 +32,8 @@ async function meadowPixels(ctx, minutes) {
 
 export default [
   ["some blades pass in front of the petals as grass grows, while other petals remain visible", async ctx => {
-    const short = await meadowPixels(ctx, 0);
-    const tall = await meadowPixels(ctx, 41);
+    const short = await meadowPixels(ctx, true);
+    const tall = await meadowPixels(ctx, false);
     let crossed = 0, visible = 0;
     short.forEach((pixel, i) => {
       if (!colors.includes(pixel)) return;

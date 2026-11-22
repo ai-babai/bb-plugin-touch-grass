@@ -87,38 +87,70 @@ function curve(ctx: CanvasRenderingContext2D, x0: number, y0: number, cx: number
 }
 
 /**
- * Рисует кустик. ripe: undefined — ягоды зелёные (не опылён); 0 — спелые сразу;
- * иначе время начала покраснения. at задаёт постоянную зеркальность куста.
+ * Раскладка кустика в px холста: трилистники и ягоды на своих черешках. По ней рисует холст
+ * и считают попадания коса и слой касаний — срезается ровно видимая листва и ягоды.
  */
-export function drawStrawberryBush(ctx: CanvasRenderingContext2D, s: BushShape, ground: number, at: number, ripe: number | undefined, now: number, dark: boolean) {
+function bushLayout(s: BushShape, ground: number, at: number) {
   const { x, stem: h, bend, headX, headY, r } = s;
-  if (r < 0.3) return;
   const side = Math.round(at * 997) % 2 ? 1 : -1;
   const sway = bend * h * 0.3;
   const leaf = r * 1.1;
-  ctx.save();
-  ctx.globalAlpha = dark ? 0.9 : 1;
   // Два боковых трилистника пониже, верхний — посередине.
   const leaves = [
     { tx: x - side * h * 0.55 + sway, ty: ground - h * 0.62, tilt: -side * 0.7 + bend * 0.4, size: leaf * 0.9, fill: LEAF_DARK },
     { tx: x + side * h * 0.5 + sway, ty: ground - h * 0.75, tilt: side * 0.6 + bend * 0.4, size: leaf * 0.95, fill: LEAF_DARK },
     { tx: headX, ty: headY, tilt: bend * 0.5, size: leaf, fill: LEAF },
   ];
+  // Ягоды на своих плодоножках: выходят от корня, выгибаются в сторону и свисают под тяжестью.
+  const berries = [
+    { dx: side * Math.min(h * 0.6, 12), drop: Math.max(h * 0.3, r * 0.6), size: r * 0.62 },
+    { dx: -side * Math.min(h * 0.32, 7), drop: Math.max(h * 0.2, r * 0.5), size: r * 0.5 },
+  ].map(b => ({ bx: x + b.dx + sway * 0.6, by: ground - b.drop, cx: x + b.dx * 0.4, cy: ground - h * 0.65, size: b.size }));
+  return { leaves, berries };
+}
+
+const TREFOIL = [-1.05, 0, 1.05];
+type Oval = { x: number; y: number; rx: number; ry: number; rot: number };
+type Stalk = { x0: number; y0: number; cx: number; cy: number; x1: number; y1: number };
+
+/** Видимые части кустика: листочки и ягоды как эллипсы, черешки как кривые, px холста. */
+export function bushParts(s: BushShape, ground: number, at: number) {
+  const ovals: Oval[] = [];
+  const stalks: Stalk[] = [];
+  if (s.r < 0.3) return { ovals, stalks };
+  const { leaves, berries } = bushLayout(s, ground, at);
+  for (const l of leaves) {
+    stalks.push({ x0: s.x, y0: ground, cx: (s.x + l.tx) / 2, cy: l.ty + s.stem * 0.15, x1: l.tx, y1: l.ty });
+    for (const a of TREFOIL) {
+      const rot = l.tilt + a; // trefoil: rotate(tilt), rotate(a), эллипс в (0, -0.55·size)
+      ovals.push({ x: l.tx + Math.sin(rot) * l.size * 0.55, y: l.ty - Math.cos(rot) * l.size * 0.55, rx: l.size * 0.36, ry: l.size * 0.55, rot });
+    }
+  }
+  for (const b of berries) {
+    stalks.push({ x0: s.x, y0: ground, cx: b.cx, cy: b.cy, x1: b.bx, y1: b.by - b.size * 0.6 });
+    ovals.push({ x: b.bx, y: b.by, rx: b.size * 0.8, ry: b.size * 0.68, rot: 0 }); // контур ягоды и чашелистики
+  }
+  return { ovals, stalks };
+}
+
+/**
+ * Рисует кустик. ripe: undefined — ягоды зелёные (не опылён); 0 — спелые сразу;
+ * иначе время начала покраснения. at задаёт постоянную зеркальность куста.
+ */
+export function drawStrawberryBush(ctx: CanvasRenderingContext2D, s: BushShape, ground: number, at: number, ripe: number | undefined, now: number, dark: boolean) {
+  const { x, stem: h, r } = s;
+  if (r < 0.3) return;
+  const { leaves, berries } = bushLayout(s, ground, at);
+  ctx.save();
+  ctx.globalAlpha = dark ? 0.9 : 1;
   for (const l of leaves) {
     curve(ctx, x, ground + 0.5, (x + l.tx) / 2, l.ty + h * 0.15, l.tx, l.ty, STALK, 0.9);
     trefoil(ctx, l.tx, l.ty, l.size, l.tilt, l.fill);
   }
-  // Ягоды на своих плодоножках: выходят от корня, выгибаются в сторону и свисают под тяжестью.
   const p = ripe === undefined ? 0 : ripe ? Math.min(1, (now - ripe) / RIPEN_MS) : 1;
-  const berries = [
-    { dx: side * Math.min(h * 0.6, 12), drop: Math.max(h * 0.3, r * 0.6), size: r * 0.62 },
-    { dx: -side * Math.min(h * 0.32, 7), drop: Math.max(h * 0.2, r * 0.5), size: r * 0.5 },
-  ];
   for (const b of berries) {
-    const bx = x + b.dx + sway * 0.6;
-    const by = ground - b.drop;
-    curve(ctx, x, ground, x + b.dx * 0.4, ground - h * 0.65, bx, by - b.size * 0.6, STALK, 0.7);
-    drawBerry(ctx, bx, by, b.size, p);
+    curve(ctx, x, ground, b.cx, b.cy, b.bx, b.by - b.size * 0.6, STALK, 0.7);
+    drawBerry(ctx, b.bx, b.by, b.size, p);
   }
   ctx.restore();
 }

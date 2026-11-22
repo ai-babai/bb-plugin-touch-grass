@@ -11,6 +11,7 @@ export function useMeadowCard() {
   const [guests, setGuests] = useState<Guests>(loadGuests);
   const [regrowMinutes, setRegrowMinutes] = useState(loadRegrowMinutes);
   const [readyAt, setReadyAt] = useState(0);
+  const [flowerDeadline, setFlowerDeadline] = useState(0);
   const choosePeriod = (minutes: number) => {
     setRegrowMinutes(minutes);
     saveRegrowMinutes(minutes);
@@ -65,7 +66,7 @@ export function useMeadowCard() {
 
   return {
     size, chooseSize, guests, toggleGuest,
-    regrowMinutes, choosePeriod, readyAt, setReadyAt,
+    regrowMinutes, choosePeriod, readyAt, setReadyAt, flowerDeadline, setFlowerDeadline,
     flipped, toggleSettings, toggleRef,
     scythe, toggleScythe, scytheRef,
     onKeyDown,

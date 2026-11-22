@@ -19,23 +19,29 @@ It's time to touch grass. A little meadow grows above the message box in each [B
 | To… | Do this |
 | --- | --- |
 | Grow the meadow | In Compact and Tall, new inputs add height and density, up to 50 steps. In Overgrown, grass grows with elapsed time. |
-| Grow a flower | Leave a new meadow open for about 15 seconds to see the first wildflower. Tap a firefly or brush across it once for another bloom. |
-| Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Pass through a flower’s head or stem to cut it. Tap the scythe again to put it away. |
+| Grow a flower | The first sprout appears after about 15 seconds. Tap a firefly or brush across it for another. Each stem grows for about ten minutes, lifting its bud into view. |
+| Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Sweep through a flower to cut it. A pass above a shorter plant trims the grass around it. Tap the scythe again to put it away. |
 | Mow the whole lawn | Press the mower on the right. It clears the grass, flowers and strawberry plants across the strip. Compact and Tall grow back in about a minute. |
 | Choose the size and visitors | Tap the sliders on the right to turn the meadow over. Choose **Compact**, **Tall** or **Overgrown**, and allow bees, butterflies or both. Tap the same spot to flip back. On a keyboard, press **Esc**. |
 
 ![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
 
+Some flowers grow in small clumps. A yellow dandelion ripens into a white seed head. Brush it back and forth to send a few seeds drifting.
+
 With the scythe put away, swipe up or down over the grass to scroll the chat. Press a flower and sweep sideways to bend its stem along with the grass. They spring back when you let go.
 
 ![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
 
-
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/wildflowers-dark.png">
-  <img src="docs/media/wildflowers.png" alt="Daisy, cornflower, clover, buttercup and wild strawberry in a freshly cut meadow" width="600">
+  <img src="docs/media/wildflowers.png" alt="Daisy, cornflower, clover, buttercup, wild strawberry and a ripe dandelion" width="600">
 </picture>
+
+Grass blades cross in front of the leaves. The mature flower heads rise to different heights along the top of the meadow. A bee landing on a flower slips behind the same blades.
+
+![Ten minutes of wildflower growth in a short time-lapse](docs/media/wildflower-growth.gif)
+
+![A yellow dandelion ripens and releases its seeds when shaken](docs/media/dandelion.gif)
 
 Butterflies visit the grass. Once flowers bloom, bees can land on them. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
 

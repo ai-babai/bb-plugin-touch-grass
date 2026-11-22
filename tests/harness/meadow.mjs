@@ -5,6 +5,18 @@ import assert from "node:assert/strict";
 export const THREAD = "thr_meadow";
 export const ORIGIN = "http://bb.test";
 export const KEY = { size: "bb-touch-grass:size", guests: "bb-touch-grass:guests", garden: `bb-touch-grass:garden:${THREAD}`, bloom: `bb-touch-grass:bloom:${THREAD}` };
+/** The next natural flower is due in a day: scenarios about other things keep the bed as seeded. */
+export const NO_BLOOM = () => ({ [KEY.bloom]: String(CLOCK_START + 86_400_000) });
+
+/** Fireflies are rare guests: the first settles about 20 s after the meadow opens, the next 40–70 s after one flew. */
+export async function awaitFirefly(m, limit = 90_000) {
+  for (let waited = 0; waited <= limit; waited += 1000) {
+    if (await m.root.locator(".tg-firefly.is-on").count()) return waited;
+    await m.run(1000);
+  }
+  throw new Error(`no firefly within ${limit} ms`);
+}
+
 /** Start of the fake clock; bloom storage contains the next deadline. */
 export const CLOCK_START = Date.parse("2026-11-21T12:00:00Z");
 export const COLORS = {
@@ -12,6 +24,7 @@ export const COLORS = {
   butterflies: ["#f4f1e6", "#e98a3a", "#7ea7e6", "#f2d64b"],
   mower: "#c8432f",
   berry: "#d8333b",
+  sproutLeaves: ["#86c447", "#9fd85e"],
   petals: ["#f7f4ec", "#5d82d8", "#d97ba7", "#f3c531"],
 };
 

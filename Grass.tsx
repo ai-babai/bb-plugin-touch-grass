@@ -1,7 +1,9 @@
 import { createFireflies } from "./fireflies";
 import { createNaturalBloom } from "./meadow-bloom";
 import { type Blade, type Theme, boxHeight, buildBlades, colorFor, meadowHeight } from "./blades";
-import { createFlowerSlots, drawFlower, type Flower, FLOWER_KINDS, gardenCapacity, loadGarden, ripenBerry, saveGarden } from "./garden";
+import { createFlowerSlots, drawFlower, type Flower, gardenCapacity, loadGarden, ripenBerry, saveGarden } from "./garden";
+import { STRAWBERRY } from "./strawberry";
+import { createDandelions } from "./dandelion";
 import { advancePlants, brushPlants, leanAway, pressPlants, REACH, tiltFlowers } from "./meadow-physics";
 import { detectTheme } from "./meadow-theme";
 import { drawLayers } from "./meadow-layers";
@@ -16,6 +18,8 @@ import { watchChatSpan } from "./meadow-reach";
 import { createFlowerHits } from "./flower-hit";
 import { createHitArea } from "./meadow-hit";
 import { createMeadowClock, type MeadowClock } from "./meadow-clock";
+import { anyGrowing, DANDELION, flowersReadyAt, matureFlowers, plantedAt } from "./flower-growth";
+import { createFlowerCanopy } from "./flower-canopy";
 import { MeadowCard } from "./MeadowCard";
 import { useMeadowCard } from "./useMeadowCard";
 
@@ -37,15 +41,31 @@ import { useMeadowCard } from "./useMeadowCard";
 
 const GROW_MS = 1400;
 
-const FIRST_FIREFLY_MS = 1800;
+const FIRST_FIREFLY_MS = 20_000; // первый светлячок не сразу: сначала луг и естественное цветение
+const ROOM_FIREFLY_MS = 15_000; // на клумбе освободилось место
+const CLUMP_KINDS = [1, 2]; // василёк и клевер растут небольшими пучками
+const CLUMP_CHANCE = 0.5;
 
 const TURN_REGROW_BOOST = 0.35; // каждый новый ход ускоряет отрастание на треть
 const SPROUT_MS = 800; // «Вырастить сейчас»: низкая и скошенная трава плавно поднимается
 const WILD_TICK_MS = 4000; // «Заросли» растут за десятки минут: редкая перерисовка вместо кадров
+const FIELD_KINDS = [0, 1, 2, 3]; // ромашка, василёк, клевер, лютик
+const WILD_KINDS = [...FIELD_KINDS, DANDELION, STRAWBERRY];
 
 /** Доля высоты при прорастании: от прежней к часам, но не выше часов — свежий срез и зрелая трава не дёргаются. */
 function sproutShare(target: number, from: number | undefined, eased: number) {
   return from === undefined ? target : Math.min(target, from + (target - from) * eased);
+}
+
+/**
+ * Пучок: естественное цветение василька или клевера иногда даёт 2–3 стебля из одного места.
+ * Каждый стебель — обычный цветок сада (отдельно косится, пчела садится на свою головку).
+ */
+function clumpOffsets() {
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const offsets = [0, side * (5 + Math.random() * 4)];
+  if (Math.random() < 0.5) offsets.push(-side * (4 + Math.random() * 4));
+  return offsets;
 }
 
 function unit(value: number | undefined): number | undefined {
@@ -89,7 +109,7 @@ export function Grass({
   const sizeRef = useRef(ui.size);
   const minutesRef = useRef(ui.regrowMinutes);
   minutesRef.current = ui.regrowMinutes;
-  const setReadyAt = ui.setReadyAt;
+  const { setReadyAt, setFlowerDeadline } = ui;
   const metricsRef = useRef({ lush, activity });
   const engineRef = useRef<Engine | null>(null);
 
@@ -171,16 +191,33 @@ export function Grass({
     let guests = guestsRef.current;
     let flipped = false;
     let scythe = false;
+    // Редкая перерисовка, пока что-то растёт само: отрастание после покоса, заросли, цветы.
+    // Цветы и заросли меняются за минуты — им хватает WILD_TICK_MS; скошенная трава Compact/Tall — чаще.
+    let regrowPeriod = 0;
+    const growing = () => anyCut || anyGrowing(flowers);
     const ensureRegrow = () => {
-      if (regrowTimer || !anyCut || disposed) return;
+      if (disposed) return;
+      const period = clock || !anyCut ? WILD_TICK_MS : reduced ? 2000 : 250;
+      if (regrowTimer && period === regrowPeriod) return;
+      window.clearInterval(regrowTimer);
+      regrowTimer = 0;
+      if (!growing()) return;
+      regrowPeriod = period;
       regrowTimer = window.setInterval(() => {
         if (document.visibilityState === "hidden") return; // время идёт, рисовать незачем
         if (!frame) draw();
-        if (!anyCut) {
+        if (!growing()) {
           window.clearInterval(regrowTimer);
           regrowTimer = 0;
-        }
-      }, clock ? WILD_TICK_MS : reduced ? 2000 : 250);
+          announceReady(); // последний цветок созрел
+        } else ensureRegrow(); // покос отрос, остались цветы: реже
+      }, period);
+    };
+    // Таймер «Зарослей» ждёт и траву, и растущие цветы: «Вырастить сейчас» доводит до зрелости всё.
+    let clockReady = 0;
+    const announceReady = () => {
+      setReadyAt(clock ? clockReady : 0);
+      setFlowerDeadline(clock ? flowersReadyAt(flowers) : 0);
     };
     const restartRegrow = () => {
       window.clearInterval(regrowTimer);
@@ -208,11 +245,13 @@ export function Grass({
         }
         saveGarden(threadId, flowers);
         naturalBloom.restart();
-        fireflies.queue(1200); // освободилось место на клумбе
+        announceReady();
+        fireflies.queue(ROOM_FIREFLY_MS); // освободилось место на клумбе
       },
     });
     // Пчела помнит номер цветка: после среза номера остальных не сдвигаются, пока она на лугу.
     const flowerSlots = createFlowerSlots(() => flowers, () => visitors.present());
+    const dandelions = createDandelions(() => saveGarden(threadId, flowers)); // шарик редеет — сад помнит
     const visitors = createVisitors({
       bounds: () => ({ width, height, meadow: mh(shown) }),
       flowerHeads: () => flowerSlots.heads(),
@@ -246,17 +285,26 @@ export function Grass({
 
     /** Новый цветок в доле ширины at: светлячок или естественное цветение. Раскрывается анимацией, если движение не уменьшено. */
     const plant = (at: number, wild = false) => {
-      const kinds = wild && flowers.length ? FLOWER_KINDS.length : FLOWER_KINDS.length - 1;
-      const flower: Flower = {
-        at,
-        kind: Math.floor(Math.random() * kinds),
-        born: reduced ? 0 : performance.now(),
-        bend: 0,
-        vel: 0,
-      };
-      if (flower.kind === FLOWER_KINDS.length - 1) flower.ripe = 0;
-      flowers.push(flower);
+      // Светлячок дарит полевой цветок 0–3; само по себе в цветущем луге растут ещё одуванчик и земляника (последней).
+      const kinds = wild && flowers.length ? WILD_KINDS : FIELD_KINDS;
+      const kind = kinds[Math.floor(Math.random() * kinds.length)];
+      const stems = wild && CLUMP_KINDS.includes(kind) && Math.random() < CLUMP_CHANCE ? clumpOffsets() : [0];
+      const room = gardenCapacity(growTo) - flowers.length - Number(fireflies.sleeping);
+      for (const [i, dx] of stems.slice(0, Math.max(1, room)).entries()) {
+        const flower: Flower = {
+          at: Math.max(0.02, Math.min(0.98, at + dx / Math.max(1, width))),
+          kind,
+          born: reduced ? 0 : performance.now(),
+          bend: 0,
+          vel: 0,
+        };
+        if (kind === STRAWBERRY) flower.ripe = 0;
+        // Растёт с ростка; соседи пучка чуть старше — не одинаковые столбики.
+        flower.planted = plantedAt(kind, Date.now() - i * (20_000 + Math.random() * 40_000));
+        flowers.push(flower);
+      }
       saveGarden(threadId, flowers);
+      announceReady();
     };
 
     const naturalBloom = createNaturalBloom({
@@ -289,6 +337,7 @@ export function Grass({
       if (widthChanged) {
         naturalBloom.check();
         blades = buildBlades(threadId, width, theme, lush);
+        flowerCanopy.relayout();
         fireflies.resize(width);
         if (width >= 60) fireflies.queue(FIRST_FIREFLY_MS);
       }
@@ -296,20 +345,41 @@ export function Grass({
     };
 
     /** «Заросли»: высоты травинок по часам луга. true — ещё растут (редкий тик, профиль попаданий). */
+    // Рост луга в целом (0..1): в «Зарослях» — по часам без учёта местных прокосов, иначе 1.
+    let meadowShare = 1;
     const applyClock = () => {
+      meadowShare = 1;
       if (!clock) return false;
       const wall = Date.now();
       const t = sprout ? Math.min(1, (performance.now() - sprout.start) / SPROUT_MS) : 1;
       const eased = 1 - (1 - t) ** 3;
-      for (const b of blades) b.wild = sproutShare(clock.share(b.x, b.h, wall), sprout?.from.get(b), eased);
+      meadowShare = 0;
+      for (const b of blades) {
+        b.wild = sproutShare(clock.share(b.x, b.h, wall), sprout?.from.get(b), eased);
+        if (b.wild > meadowShare) meadowShare = b.wild; // нескошенный столбец = часы луга
+      }
       if (t >= 1) sprout = null;
       return sprout !== null || wall < clock.readyAt();
+    };
+
+    /**
+     * Цветы стоят по местной массе травы: стебель от её высоты (flower-canopy), головки чуть выше.
+     * Масса — стоящая трава без местных срезов, в «Зарослях» — по росту всего луга, поэтому
+     * после покоса цветы невысокие вместе с травой, а срез косой рядом не дёргает цветок.
+     */
+    const flowerCanopy = createFlowerCanopy();
+    const placeFlowers = (full: number, visibleUpTo: number) => {
+      for (const f of flowers) {
+        f.mass = full * flowerCanopy.at(f, blades, f.at * width, visibleUpTo) * meadowShare;
+        f.room = height;
+      }
     };
 
     /** Слой попаданий «Зарослей» следует за профилем травы. */
     const updateHitArea = (full: number, visibleUpTo: number, now: number) => {
       if (wasCut && !anyCut) hitArea.invalidate(); // трава отросла полностью
       wasCut = anyCut;
+      // Цветы принимают касание своим слоем (flower-hit): здесь только трава.
       hitArea.update({ blades, width, height, full, visibleUpTo, now }, anyCut || shown !== growTo, !!canopy);
     };
 
@@ -326,19 +396,29 @@ export function Grass({
       const seedsVisible = shown > 0.55;
       const now = performance.now();
       const wildGrowing = applyClock();
+      placeFlowers(full, visibleUpTo);
       const dark = theme === "dark";
       // Цветы стоят в траве: передняя доля травинок рисуется поверх них (meadow-layers).
+      // Пчела у своего цветка рисуется сразу после него — под теми же передними травинками.
+      const nest = flowerSlots.at(visitors.nest());
+      let guestDrawn = false;
       anyCut = drawLayers(
         blades, flowers,
         b => renderBlade(ctx, b, width, ground, full, visibleUpTo, seedsVisible, now),
-        f => drawFlower(ctx, f, width, full, ground, shown, dark, now),
+        f => {
+          drawFlower(ctx, f, width, full, ground, shown, dark, now);
+          if (f !== nest) return;
+          visitors.draw(ctx, now, dark);
+          guestDrawn = true;
+        },
       );
       anyCut ||= wildGrowing;
       updateHitArea(full, visibleUpTo, now);
       if (canopy) updateFlowerHits(flowers, width, full, shown, now);
       fireflies.place(full);
+      dandelions.paint(ctx, now, dark);
       mowing.paint(ctx, now, dark);
-      visitors.draw(ctx, now, dark);
+      if (!guestDrawn) visitors.draw(ctx, now, dark);
     };
 
     // --- Покос и отрастание ----------------------------------------------
@@ -359,6 +439,16 @@ export function Grass({
       return t < 1;
     };
 
+    /** Пружины травы и цветов, палец на траве, пушинки одуванчиков. true — нужен следующий кадр. */
+    const stepPlants = (dt: number, now: number) => {
+      let active = advancePlants(blades, flowers, dt, now);
+      if (press) {
+        pressPlants(blades, flowers, press.x, press.y, press.lean, width, dt); // палец держит траву и цветы
+        active = true;
+      }
+      return dandelions.step(flowers, dt, now) || active; // встряхнутый шарик роняет пушинки
+    };
+
     const tick = (now: number) => {
       frame = 0;
       if (disposed) return;
@@ -371,11 +461,7 @@ export function Grass({
       if (mowing.stepMower(now)) active = true;
       if (mowing.stepClippings(dt)) active = true;
       if (visitors.step(now, dt)) active = true;
-      if (advancePlants(blades, flowers, dt, now)) active = true;
-      if (press) {
-        pressPlants(blades, flowers, press.x, press.y, press.lean, width, dt); // палец держит траву и цветы
-        active = true;
-      }
+      if (stepPlants(dt, now)) active = true;
 
       draw();
       ensureRegrow();
@@ -392,6 +478,7 @@ export function Grass({
     const straighten = () => {
       for (const blade of blades) blade.bend = 0;
       for (const f of flowers) f.bend = 0;
+      dandelions.nudge(flowers);
       draw();
     };
 
@@ -419,12 +506,14 @@ export function Grass({
           blade.bend = py >= height - full * blade.h - 6 ? Math.sign(distance) * weight * 0.65 : 0;
         }
         tiltFlowers(flowers, px, py, width, REACH);
+        dandelions.nudge(flowers);
         draw();
       },
       straighten,
       press(x, y, lean) {
         if (reduced) {
           leanAway(blades, flowers, x, y, width); // неподвижно, без укладывания по свайпу
+          dandelions.nudge(flowers);
           draw();
           return;
         }
@@ -484,8 +573,8 @@ export function Grass({
     const configureClock = () => {
       sprout = null;
       clock?.flush();
-      clock = size === "overgrown" ? createMeadowClock(threadId, minutesRef.current, setReadyAt) : undefined;
-      if (!clock) setReadyAt(0);
+      clock = size === "overgrown" ? createMeadowClock(threadId, minutesRef.current, at => { clockReady = at; announceReady(); }) : undefined;
+      announceReady();
       for (const b of blades) {
         b.wild = undefined;
         if (clock) b.cutAt = 0; // минутные прокосы других режимов в заросли не переносятся
@@ -515,7 +604,7 @@ export function Grass({
         resize();
         schedule();
         naturalBloom.check();
-        fireflies.queue(1200); // в подросшем луге появилось место для цветка
+        fireflies.queue(ROOM_FIREFLY_MS); // в подросшем луге появилось место для цветка
       },
       setSize(next: MeadowSize) {
         if (next === size) return;
@@ -562,6 +651,8 @@ export function Grass({
         // Без reduced motion низкие участки дорастают за SPROUT_MS; часы сохраняют зрелость сразу.
         sprout = reduced ? null : { start: performance.now(), from: new WeakMap(blades.map(b => [b, b.wild ?? 1])) };
         clock.growNow(Date.now());
+        if (matureFlowers(flowers)) saveGarden(threadId, flowers);
+        announceReady();
         hitArea.invalidate();
         draw();
         schedule();

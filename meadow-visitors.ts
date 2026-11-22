@@ -58,6 +58,7 @@ type Gait = { speed: number; accel: number; slow: number };
 
 export const FIRST_VISITOR_MS = 6000;
 const SCARE_RADIUS = 26;
+const NEST_PX = 16; // ближе к головке пчела уже «в траве» цветка: её закрывают его передние травинки
 const EDGE = 14;
 const STAY_MS = 20_000;
 const STILL_MS = 15_000;
@@ -399,6 +400,16 @@ export function createVisitors(host: VisitorHost) {
     /** Гость рядом с точкой по горизонтали. */
     near: (x: number, radius: number) => !!v && Math.abs(v.x - x) < radius * boost(),
     present: () => v !== null,
+    /**
+     * Номер цветка, на глубине которого пчела (сидит или уже у самой головки), иначе -1.
+     * Хозяин рисует её сразу после этого цветка, под его передними травинками; иначе — поверх луга.
+     */
+    nest() {
+      const f = v;
+      if (f?.kind !== "bee" || f.flower < 0) return -1;
+      if (f.mode === "sit") return f.flower;
+      return f.mode === "land" && Math.hypot(f.tx - f.x, f.ty - f.y) < NEST_PX * boost() ? f.flower : -1;
+    },
     /** Изменился выбор гостей: убрать выключенного, позвать разрешённого. */
     guestsChanged() {
       if (v && !host.guests()[v.kind]) {

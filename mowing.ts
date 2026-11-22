@@ -40,11 +40,9 @@ export function createMowing(site: MowingSite) {
   let mowDir = 1;
   let selfMowAt: { x: number; y: number } | null = null; // прошлая точка косы, px холста
   const clippings: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
-  const nearFlower = (x: number, spare: number[]) => spare.some(fx => Math.abs(fx - x) < 4.5);
 
   /** Срезает травинку до доли keep её полной высоты; ниже лезвия не трогает. */
-  const cutBlade = (b: Blade, now: number, spare: number[], keep = STUBBLE) => {
-    if (nearFlower(b.x, spare)) return false;
+  const cutBlade = (b: Blade, now: number, keep = STUBBLE) => {
     if (regrowth(b, now) <= keep + 0.04) return false; // уже не выше лезвия
     if (b.wild !== undefined) {
       b.wild = keep;
@@ -99,8 +97,6 @@ export function createMowing(site: MowingSite) {
     site.cutFlowers(cut);
   };
 
-  /** Цветы, которые коса не задела: трава у их стебля остаётся. */
-  const survivorXs = (cut: Flower[]) => site.flowers.filter(f => !cut.includes(f)).map(f => f.at * site.width);
 
   const mow = () => {
     if (mower || !site.width) return;
@@ -108,7 +104,7 @@ export function createMowing(site: MowingSite) {
     site.onPass(now);
     if (site.reduced) {
       removeFlowers(site.flowers.slice(), now); // косилка убирает и цветы на своём пути
-      for (const b of site.blades) cutBlade(b, now, []);
+      for (const b of site.blades) cutBlade(b, now);
       site.onMowed();
       site.markCut();
       site.draw();
@@ -133,7 +129,7 @@ export function createMowing(site: MowingSite) {
     for (const b of site.blades) {
       if (b.cutAt >= mower.start) continue;
       if (mower.dir * (b.x - front) > 0) continue;
-      if (cutBlade(b, now, [])) throwClipping(b, b.x);
+      if (cutBlade(b, now)) throwClipping(b, b.x);
     }
     const pass = mower;
     removeFlowers(site.flowers.filter(f => pass.dir * (f.at * site.width - front) <= 0), now);
@@ -146,6 +142,15 @@ export function createMowing(site: MowingSite) {
     return true;
   };
 
+  /**
+   * Где по горизонтали лежит травинка: от корня до верхушки. Наклонённая травинка
+   * может стоять корнем вне прохода, а стеблем в нём — её тоже режем.
+   */
+  const bladeSpan = (b: Blade, now: number): [number, number] => {
+    const tip = b.x + (b.lean + Math.max(-1.15, Math.min(1.15, b.bend)) * 0.8) * bladeLength(b, site.bladeHeight, site.visibleUpTo, now);
+    return [Math.min(b.x, tip), Math.max(b.x, tip)];
+  };
+
   /** Ручной покос: лезвие идёт от прошлой точки к (px, py) и режет на своей высоте. */
   const selfMow = (px: number, py: number, now: number) => {
     const from = selfMowAt ?? { x: px, y: py };
@@ -154,14 +159,14 @@ export function createMowing(site: MowingSite) {
     const hi = Math.max(from.x, px) + SELF_MOW_REACH;
     const span = px - from.x;
     const heightAt = (x: number) => from.y + (py - from.y) * (span ? Math.min(1, Math.max(0, (x - from.x) / span)) : 1);
-    const hit = site.flowers.filter(f => scytheHitsFlower(shapeOf(f, now), site.height, from, { x: px, y: py }));
-    const spare = survivorXs(hit);
+    const hit = site.flowers.filter(f => scytheHitsFlower(f, shapeOf(f, now), site.height, from, { x: px, y: py }));
     removeFlowers(hit, now);
     let cut = hit.length > 0;
     for (const b of site.blades) {
-      if (b.x < lo || b.x > hi) continue;
-      const keep = keepBelow(b, heightAt(b.x), now);
-      if (keep !== null && cutBlade(b, now, spare, keep)) {
+      const [left, right] = bladeSpan(b, now);
+      if (right < lo || left > hi) continue;
+      const keep = keepBelow(b, heightAt(Math.max(lo, Math.min(hi, b.x))), now);
+      if (keep !== null && cutBlade(b, now, keep)) {
         cut = true;
         throwClipping(b, b.x);
       }
@@ -195,7 +200,7 @@ export function createMowing(site: MowingSite) {
       clippings.length = 0;
       if (mower) {
         const now = performance.now();
-        for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now, []);
+        for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now);
         site.cutFlowers([...site.flowers]);
         mower = null;
         site.onMowed();
