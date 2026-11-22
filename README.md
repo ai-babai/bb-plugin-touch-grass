@@ -8,11 +8,11 @@ created: "2026-11-22"
 
 # Touch Grass for BB
 
-[Русский](README.ru.md) · [Touch Grass on popkov.dev](https://popkov.dev/en/apps/touch-grass/) · [BB Market submission](https://github.com/get-bb/marketplace/pull/1034)
+[Русский](README.ru.md) · [Touch Grass on popkov.dev](https://popkov.dev/en/apps/touch-grass/) · [Install from BB Market](https://getbb.app/marketplace/touch-grass)
 
 It's time to touch grass. A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
-![A mower cutting the grass and wildflowers as it crosses the meadow](docs/media/mower.gif)
+![Wildflowers and tall grass growing over messages in a BB chat](docs/media/market/meadow.webp)
 
 ## Play
 
@@ -45,8 +45,6 @@ Grass blades cross in front of the leaves. The mature flower heads rise to diffe
 
 Butterflies visit the grass. Bees wait for open petals. A closed bud or a white dandelion seed head is left to ripen undisturbed. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
 
-![Mobile meadow settings with the growth slider, countdown and Grow now button](docs/media/settings.png)
-
 **Overgrown** is the default for a new installation. In this mode, the grass grows over the messages to about one third of the visible chat. Tap the standing blades to press them down. Cut a path with the scythe and you can tap links through that opening. The mower clears the full width. The mower, bee and butterfly appear larger in this mode.
 
 Every meadow starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open settings in any size to see the countdown above the size controls. Choose any whole minute from 5 to 90. The slider marks 5, 15, 40 and 90 minutes, giving shorter periods more room for fine adjustments. Choose **Grow now** to bring the grass to full height in the selected size. Mowing starts the timer again.
@@ -68,13 +66,13 @@ The plugin reads BB’s local event log. The server sends the meadow two numbers
 
 ## Overgrown gallery
 
-| Desktop · light | Desktop · dark |
-| --- | --- |
-| [![Grass growing over the chat in light mode](docs/media/overgrown-desktop.png)](docs/media/overgrown-desktop.png) | [![The same meadow after dark](docs/media/overgrown-desktop-dark.png)](docs/media/overgrown-desktop-dark.png) |
+![The mower reveals the chat on the left as it cuts through the meadow](docs/media/market/mower-desktop.webp)
 
-| On a phone | Holding a finger on the grass |
+| Touch on a phone | Regrowth settings |
 | --- | --- |
-| [<img src="docs/media/overgrown-mobile.png" width="260" alt="Standing grass above the mobile composer" />](docs/media/overgrown-mobile.png) | [<img src="docs/media/overgrown-press.png" width="260" alt="Blades part around the finger" />](docs/media/overgrown-press.png) |
+| [<img src="docs/media/market/touch.webp" width="260" alt="Blades bend away from a held finger" />](docs/media/market/touch.webp) | [<img src="docs/media/market/settings.webp" width="260" alt="A 15-minute growth period with about eight minutes left" />](docs/media/market/settings.webp) |
+
+[Watch the mower in motion](docs/media/mower.gif) · [See the meadow in light mode](docs/media/overgrown-desktop.png)
 
 ![Touch, drag and release in the tall grass](docs/media/overgrown-touch.gif)
 

@@ -8,11 +8,11 @@ created: "2026-11-22"
 
 # Погладить траву
 
-[English](README.md) · [Страница приложения](https://popkov.dev/apps/touch-grass/) · [Заявка в BB Market](https://github.com/get-bb/marketplace/pull/1034)
+[English](README.md) · [Страница приложения](https://popkov.dev/apps/touch-grass/) · [Установить из BB Market](https://getbb.app/marketplace/touch-grass)
 
 Пришло время погладить траву. Над полем ввода в каждом чате [BB](https://getbb.app) растёт свой луг. Проведи курсором по траве, чтобы пригнуть стебли. Коснись мерцающего огонька — светлячок улетит, а на его месте раскроется цветок.
 
-![Газонокосилка срезает траву и цветы по ходу движения](docs/media/mower.gif)
+![Высокая трава и полевые цветы поверх переписки в BB](docs/media/market/meadow.webp)
 
 ## Как играть
 
@@ -54,17 +54,15 @@ created: "2026-11-22"
 
 Чем больше **недавних вызовов инструментов**, тем вероятнее встреча с пчелой у цветов. Плагин смотрит на 24 последних начатых действия. При 12 вызовах активность достигает максимума.
 
-![Мобильные настройки зарослей с ползунком времени, обратным отсчётом и кнопкой «Вырастить сейчас»](docs/media/settings-ru.png)
-
 ## Галерея зарослей
 
-| На компьютере, светлая тема | Тёмная тема |
-| --- | --- |
-| [![Трава поднялась над сообщениями](docs/media/overgrown-desktop.png)](docs/media/overgrown-desktop.png) | [![Тот же луг в тёмном чате](docs/media/overgrown-desktop-dark.png)](docs/media/overgrown-desktop-dark.png) |
+![Слева за газонокосилкой уже виден текст, справа высокая трава ещё стоит](docs/media/market/mower-desktop.webp)
 
-| На телефоне | Если прижать пальцем |
+| Касание на телефоне | Таймер отрастания |
 | --- | --- |
-| [<img src="docs/media/overgrown-mobile.png" width="260" alt="Заросли над мобильным полем ввода" />](docs/media/overgrown-mobile.png) | [<img src="docs/media/overgrown-press.png" width="260" alt="Под пальцем появляется просвет" />](docs/media/overgrown-press.png) |
+| [<img src="docs/media/market/touch.webp" width="260" alt="Трава раздвигается под пальцем до самой земли" />](docs/media/market/touch.webp) | [<img src="docs/media/market/settings.webp" width="260" alt="Выбраны 15 минут отрастания, осталось около восьми" />](docs/media/market/settings.webp) |
+
+[Посмотреть покос в движении](docs/media/mower.gif) · [Луг в светлой теме](docs/media/overgrown-desktop.png) · [Настройки на русском](docs/media/settings-ru.png)
 
 ![Трава ложится под пальцем и поднимается после отпускания](docs/media/overgrown-touch.gif)
 
