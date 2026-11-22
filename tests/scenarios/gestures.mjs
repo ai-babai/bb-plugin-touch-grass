@@ -98,8 +98,9 @@ export default [
       assert.ok(restored.every((h, i) => Math.abs(h - before[i]) <= 3), `released immediately: ${before} -> ${restored}`);
     })],
   ["a bare finger produces a visible wave and the blades return after release", ctx =>
-    withMeadow(ctx, phone, async m => {
+    withMeadow(ctx, { ...phone, random: 0.01 }, async m => {
       const touch = await finger(m);
+      // Keep the sleeping firefly away from the stroke so the silhouette contains only grass.
       // The silhouette is stable across Chromium's GPU and readback renderers.
       const zones = Array.from({ length: 12 }, (_, i) => [.37 + .021*i, .39 + .021*i]);
       const resting = await m.grass(...zones);

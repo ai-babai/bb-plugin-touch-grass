@@ -1,9 +1,11 @@
-// Wild strawberry: the fifth flower. The first bee landing on it ripens a small red berry
-// that is saved once per thread, spared by the scythe and the mower, and shown after a reload.
+// Wild strawberry: a low bush of green trefoils with berries on their own stalks, not a flower.
+// The first bee landing on it ripens the green berries red; ripeness is saved once per thread and shown after a reload. A scythe passing above it spares it;
+// the mower takes it with the grass.
 import assert from "node:assert/strict";
 import { COLORS, KEY, turns, withMeadow } from "../harness/meadow.mjs";
 
-const STRAWBERRY_CENTER = "#d9c64a";
+const LEAF = "#2f7a2c";
+const GREEN_BERRY = "#b4d288";
 const bed = (garden, extra = {}) => ({ rows: turns(50), storage: { [KEY.size]: "full", [KEY.garden]: JSON.stringify(garden) }, ...extra });
 const predictable = m => m.bb(() => { Math.random = () => 0.15; });
 const berry = async m => (await m.seen([COLORS.berry]))[0];
@@ -13,9 +15,9 @@ const countGardenWrites = m => m.bb(key => {
   Storage.prototype.setItem = function (k, v) { if (k === key) window.__gardenWrites++; return set.call(this, k, v); };
 }, KEY.garden);
 
-async function drag(m, from, to) {
+async function drag(m, from, to, above = 0.2) {
   const box = await m.box();
-  const y = box.y + box.height * 0.8;
+  const y = box.y + box.height * (1 - above);
   await m.page.mouse.move(box.x + box.width * from, y);
   await m.page.mouse.down();
   await m.page.mouse.move(box.x + box.width * to, y, { steps: 24 });
@@ -24,9 +26,13 @@ async function drag(m, from, to) {
 }
 
 export default [
-  ["a bee ripens the strawberry once; scythe, mower and reload keep the berry", ctx => withMeadow(ctx, bed([{ at: 0.5, kind: 4 }]), async m => {
-    assert.equal((await m.seen([STRAWBERRY_CENTER, ...COLORS.petals])).length, 2, "a white five-petal flower with a yellow heart");
-    assert.equal(await berry(m), undefined, "no berry before a bee");
+  ["a bee ripens the strawberry once; a high scythe and a reload keep the berry, the mower takes it", ctx => withMeadow(ctx, bed([{ at: 0.5, kind: 4 }]), async m => {
+    assert.ok((await m.seen([LEAF]))[0], "green trefoils of a low bush");
+    assert.deepEqual(await m.seen(COLORS.petals), [], "no flower petals: it is a bush, not a flower");
+    const green = (await m.seen([GREEN_BERRY]))[0];
+    const { height } = await m.box();
+    assert.ok(green && green.y > height * 0.6, `green berries hang low on their own stalks: ${green?.y} of ${height}`);
+    assert.equal(await berry(m), undefined, "no red berry before a bee");
     await predictable(m);
     await countGardenWrites(m);
     await m.run(27_000);
@@ -37,16 +43,21 @@ export default [
     assert.ok(ripe && Math.abs(ripe.x - width / 2) < 20, `a red berry hangs by the flower: ${ripe?.x} of ${width}`);
 
     await m.scytheButton.click();
-    await drag(m, 0.4, 0.6);
+    await drag(m, 0.4, 0.6, 0.95); // the blade passes above the flower and the berry
     await m.page.keyboard.press("Escape");
+    await m.run(600);
+    await m.forget();
+    await m.run(300);
+    assert.ok(await berry(m), "a scythe above the plant spares it");
+    await m.reload();
+    assert.ok(await berry(m), "ripe at once after a reload");
+    assert.deepEqual(await m.garden(), [{ at: 0.5, kind: 4, ripe: true }]);
     await m.mowButton.click();
     await m.run(6000);
     await m.forget();
     await m.run(300);
-    assert.ok(await berry(m), "the scythe and the mower spare it");
-    await m.reload();
-    assert.ok(await berry(m), "ripe at once after a reload");
-    assert.deepEqual(await m.garden(), [{ at: 0.5, kind: 4, ripe: true }]);
+    assert.equal(await berry(m), undefined, "the mower takes the strawberry with its berry");
+    assert.deepEqual(await m.garden(), []);
   })],
 
   ["with reduced motion a sitting bee pollinates; older saved gardens still load", ctx => withMeadow(ctx, bed(

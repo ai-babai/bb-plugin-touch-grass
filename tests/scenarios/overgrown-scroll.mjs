@@ -85,6 +85,16 @@ export default [
       const down = await settle(m);
       assert.ok(up < start - 50 && down > up + 50, `scrollTop ${start} -> ${up} -> ${down}`);
     })],
+  ["a vertical swipe starting on the firefly scrolls without planting a flower", ctx =>
+    withMeadow(ctx, { ...phone, size: "overgrown" }, async m => {
+      await m.bb(dockInScroller);
+      await m.bb(() => { document.querySelector(".chat").scrollTop = 1200; });
+      const start = await settle(m);
+      const target = await m.root.locator(".tg-firefly-target:visible").boundingBox();
+      await swipe(m, { x: target.x + target.width / 2, y: target.y + target.height / 2 }, -100);
+      await m.page.waitForFunction(y => document.querySelector(".chat").scrollTop > y + 50, start);
+      assert.deepEqual(await m.garden(), []);
+    })],
   ["a vertical swipe on the timer thumb scrolls the chat and preserves the period", ctx =>
     withMeadow(ctx, { ...phone, size: "overgrown" }, async m => {
       await m.bb(dockInScroller);

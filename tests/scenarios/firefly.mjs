@@ -16,12 +16,29 @@ async function playFirefly(m) {
     "the firefly glows inside the meadow");
   await m.stroke(spot.x + 150, spot.y, { sweeps: 10 });
   assert.deepEqual(await m.garden(), [], "brushing far away does not wake it");
-  await m.stroke(spot.x, spot.y, { sweeps: 12 });
+  await m.page.mouse.move(spot.x - 22, spot.y);
+  await m.page.mouse.move(spot.x + 22, spot.y, { steps: 6 });
   await m.page.mouse.move(1, 1);
   return spot;
 }
 
 export default [
+  ["one tap or keyboard activation wakes a firefly, and the scythe can pass over it", async ctx => {
+    for (const method of ["touch", "keyboard"]) await withMeadow(ctx, {
+      size: "overgrown", viewport: { width: 390, height: 760 }, hasTouch: true, isMobile: true,
+    }, async m => {
+      const wake = m.root.getByRole("button", { name: "Разбудить светлячка" });
+      await m.scytheButton.tap();
+      assert.equal(await wake.isVisible(), false);
+      await m.scytheButton.tap();
+      const spot = await center(glow(m));
+      if (method === "touch") await m.page.touchscreen.tap(spot.x + 10, spot.y);
+      else await wake.press("Enter");
+      const flowers = await m.garden();
+      assert.equal(flowers.length, 1);
+      assert.ok(flowers[0].kind < 4, "the firefly grows an ordinary wildflower");
+    });
+  }],
   ["brushing the firefly grows a flower that survives a reload", async ctx => {
     for (const reducedMotion of ["no-preference", "reduce"]) {
       await withMeadow(ctx, { rows: turns(30), reducedMotion }, async m => {

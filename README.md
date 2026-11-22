@@ -12,25 +12,25 @@ created: "2026-11-22"
 
 It's time to touch grass. A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
-![A mower crossing a mature meadow and leaving the flowers standing](docs/media/mower.gif)
+![A mower cutting the grass and wildflowers as it crosses the meadow](docs/media/mower.gif)
 
 ## Play
 
 | To… | Do this |
 | --- | --- |
 | Grow the meadow | In Compact and Tall, new inputs add height and density, up to 50 steps. In Overgrown, grass grows with elapsed time. |
-| Grow a flower | Brush back and forth over a glowing firefly. It takes off and leaves a daisy, cornflower, clover, buttercup or wild strawberry blossom. Each chat keeps its own flowers on this device. |
-| Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Tap the scythe again to put it away. |
-| Mow the whole lawn | Press the mower on the right. It cuts across the strip, spares flowers and leaves stubble. Compact and Tall grow back in about a minute. |
+| Grow a flower | Leave a new meadow open for about 15 seconds to see the first wildflower. Tap a firefly or brush across it once for another bloom. |
+| Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Pass through a flower’s head or stem to cut it. Tap the scythe again to put it away. |
+| Mow the whole lawn | Press the mower on the right. It clears the grass, flowers and strawberry plants across the strip. Compact and Tall grow back in about a minute. |
 | Choose the size and visitors | Tap the sliders on the right to turn the meadow over. Choose **Compact**, **Tall** or **Overgrown**, and allow bees, butterflies or both. Tap the same spot to flip back. On a keyboard, press **Esc**. |
 
 ![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
 
-With the scythe put away, swipe up or down over the grass to scroll the chat. Swipe sideways to bend a wave of blades. They spring back when you let go.
+With the scythe put away, swipe up or down over the grass to scroll the chat. Press a flower and sweep sideways to bend its stem along with the grass. They spring back when you let go.
 
 ![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
 
-Butterflies visit the grass. Once flowers bloom, bees can land on them. A bee landing on a wild strawberry blossom leaves a ripe red berry. It stays in this chat’s garden, even after mowing. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
+Butterflies visit the grass. Once flowers bloom, bees can land on them. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
 
 ![Mobile meadow settings with the growth slider, countdown and Grow now button](docs/media/settings.png)
 

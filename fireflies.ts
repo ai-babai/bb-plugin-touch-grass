@@ -1,9 +1,11 @@
 import { gardenCapacity, type Flower } from "./garden";
+import { openSpot } from "./meadow-bloom";
+import { copy } from "./meadow-copy";
 import { tallBoost } from "./meadow-critters";
 
 const FIREFLY_REACH = 40; // светлячок чувствует движение только рядом, px
-const WAKE_AT = 320; // сколько «поглаженных» пикселей нужно, чтобы разбудить
-const FADE_PER_S = 55; // без поглаживания светлячок снова засыпает
+const WAKE_AT = 24; // сколько «поглаженных» пикселей нужно, чтобы разбудить
+const FADE_PER_S = 6; // без поглаживания светлячок снова засыпает
 const FLY_MS = 1600;
 
 /** Светлячок в высоких «Зарослях» растёт мягче гостей (до ×1.7), чтобы не заслонять текст чата. full — высота травы, px. */
@@ -26,18 +28,6 @@ function playableStrip(element: HTMLElement, width: number) {
   return { left: left + 6, right: right - 6 };
 }
 
-function openSpot(flowers: Flower[], width: number, left: number, right: number) {
-  const occupied = flowers.map(f => f.at * width).filter(x => x > left && x < right);
-  const positions = [left, ...occupied.sort((a, b) => a - b), right];
-  let gap = 0;
-  let start = left;
-  for (let i = 1; i < positions.length; i++) {
-    const size = positions[i] - positions[i - 1];
-    if (size > gap) { gap = size; start = positions[i - 1]; }
-  }
-  return start + gap * (0.2 + 0.6 * Math.random());
-}
-
 export function createFireflies(host: Habitat) {
   let disposed = false;
   let firefly: { x: number; energy: number; updated: number; waking: boolean } | null = null;
@@ -48,6 +38,12 @@ export function createFireflies(host: Habitat) {
   const flyEl = document.createElement("div");
   flyEl.className = "tg-firefly";
   flyEl.innerHTML = '<div class="tg-firefly-pulse"><div class="tg-firefly-glow"></div></div>';
+  const target = document.createElement("button");
+  target.type = "button";
+  target.className = "tg-firefly-target";
+  target.setAttribute("aria-label", copy.wakeFirefly);
+  target.title = copy.wakeFirefly;
+  flyEl.appendChild(target);
   host.element.appendChild(flyEl);
 
   const placeFirefly = (full: number) => {
@@ -57,7 +53,10 @@ export function createFireflies(host: Habitat) {
     const bottom = `${(2 + Math.min(full * 0.32, 14 * size)).toFixed(1)}px`;
     flyEl.style.setProperty("--tg-fly", size.toFixed(2));
     if (flyEl.style.left !== left) flyEl.style.left = left;
-    if (flyEl.style.bottom !== bottom) flyEl.style.bottom = bottom;
+    if (flyEl.style.bottom !== bottom) {
+      flyEl.style.bottom = bottom;
+      target.style.bottom = `-${bottom}`;
+    }
   };
 
   const showEnergy = () => {
@@ -82,7 +81,7 @@ export function createFireflies(host: Habitat) {
     if (disposed || firefly || width < 60 || flowers.length >= gardenCapacity(growth)) return;
     const { left, right } = playableStrip(host.element, width);
     if (right <= left) return;
-    const x = openSpot(flowers, width, left, right);
+    const x = openSpot(flowers.map(f => f.at * width), left, right);
     firefly = { x, energy: 0, updated: performance.now(), waking: false };
     flyEl.classList.remove("is-waking");
     showEnergy();
@@ -96,7 +95,7 @@ export function createFireflies(host: Habitat) {
   };
 
   const wake = () => {
-    if (!firefly) return;
+    if (!firefly || firefly.waking) return;
     const fly = firefly;
     fly.waking = true;
     fly.energy = WAKE_AT;
@@ -112,6 +111,8 @@ export function createFireflies(host: Habitat) {
       queueFirefly(3500 + Math.random() * 3000);
     }, host.read().reduced ? 900 : FLY_MS);
   };
+
+  target.addEventListener("click", wake);
 
   const feedFirefly = (px: number, dx: number, now: number) => {
     if (!firefly || firefly.waking) return;
@@ -150,6 +151,7 @@ export function createFireflies(host: Habitat) {
       clearTimeout(spawnTimer);
       clearTimeout(wakeTimer);
       stopFade();
+      target.removeEventListener("click", wake);
       flyEl.remove();
       firefly = null;
     },

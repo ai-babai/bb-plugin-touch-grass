@@ -13,7 +13,7 @@
 
 const STROKE_GAP_MS = 120; // дольше пауза — новый жест, а не продолжение
 const CONTROLS = ".tg-control, .tg-back";
-const GRASS_HIT = ".tg-hit";
+const GRASS_HIT = ".tg-hit, .tg-flower-hit";
 
 export interface PointerSite {
   readonly host: HTMLElement;
@@ -27,8 +27,8 @@ export interface PointerSite {
   lift(): void;
   feed(x: number, dx: number, now: number): void;
   stroke(x: number, y: number, dx: number): void;
-  /** Палец на траве: lean -1..1 — куда уложить, 0 — в стороны от пальца. */
-  press(x: number, lean: number): void;
+  /** Палец на траве (y — высота на холсте, цветок отзывается до своей головки): lean -1..1 — куда уложить, 0 — в стороны. */
+  press(x: number, y: number, lean: number): void;
   release(): void;
   bend(x: number, y: number): void;
   straighten(): void;
@@ -81,17 +81,17 @@ export function createPointerInput(site: PointerSite) {
   };
 
   const startPress = (event: PointerEvent) => {
-    const { x } = local(event);
+    const { x, y } = local(event);
     finger = { id: event.pointerId, x: event.clientX, lean: 0 };
-    site.press(x, 0);
+    site.press(x, y, 0);
   };
 
-  const followPress = (event: PointerEvent, x: number) => {
+  const followPress = (event: PointerEvent, x: number, y: number) => {
     if (finger === null) return;
     const dx = event.clientX - finger.x;
     finger.x = event.clientX;
     finger.lean = Math.max(-1, Math.min(1, finger.lean * LEAN_KEEP + dx * LEAN_PER_PX));
-    site.press(x, finger.lean);
+    site.press(x, y, finger.lean);
   };
 
   const feedFirefly = (event: PointerEvent, x: number) => {
@@ -159,7 +159,7 @@ export function createPointerInput(site: PointerSite) {
     }
     if (site.scythe) return;
     feedFirefly(event, x);
-    if (finger?.id === event.pointerId) followPress(event, x);
+    if (finger?.id === event.pointerId) followPress(event, x, y);
     else if (event.pointerType !== "touch") brush(event, x, y);
   };
 

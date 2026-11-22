@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-touch-grass",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "type": "module",
   "engines": {
     "bb": ">=0.50",
@@ -9,7 +9,7 @@
   },
   "bb": {
     "name": "Touch Grass",
-    "description": "A living meadow in each BB chat. Brush fireflies into bloom, meet butterflies, or mow a path through the grass.",
+    "description": "A living meadow in each BB chat. Wildflowers and strawberries grow on their own. Tap a firefly, brush the stems, or mow a path to your messages.",
     "branding": {
       "icon": "Sprout"
     },

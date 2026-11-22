@@ -1,4 +1,4 @@
-// Mowing with the scythe and with the mower; flowers are spared; grass grows back.
+// Mowing with the scythe and with the mower; the mower takes the flower on its way; grass grows back.
 import assert from "node:assert/strict";
 import { COLORS, KEY, THREAD, turns, withMeadow } from "../harness/meadow.mjs";
 
@@ -16,7 +16,7 @@ async function drag(m, from, to) {
 }
 
 export default [
-  ["scythe cuts a path under the pointer, mower cuts the rest but spares the flower, grass regrows", ctx => withMeadow(ctx, mature, async m => {
+  ["scythe cuts a path under the pointer, mower cuts the rest and the flower, grass regrows", ctx => withMeadow(ctx, mature, async m => {
     const before = await m.grass(LEFT, RIGHT);
     assert.ok(before[0] > 40 && before[1] > 40, `tall meadow: ${before}`);
     await drag(m, 0.21, 0.46);
@@ -41,8 +41,8 @@ export default [
     assert.ok(mowed[1] < before[1] / 2, `mower cut the rest: ${mowed}`);
     await m.forget();
     await m.run(300);
-    assert.deepEqual((await m.seen(COLORS.petals)).length, 1, "the flower still blooms");
-    assert.equal((await m.garden()).length, 1);
+    assert.deepEqual(await m.seen(COLORS.petals), [], "the mower took the flower off the bed");
+    assert.deepEqual(await m.garden(), [], "and the thread remembers it");
 
     await m.run(30_000);
     const half = await m.grass(LEFT, RIGHT);

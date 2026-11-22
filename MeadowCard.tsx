@@ -82,6 +82,10 @@ function MeadowFront({ ui, canvasRef, onMow }: Pick<Props, "ui" | "canvasRef" | 
       <canvas ref={canvasRef} className="tg-canvas" aria-hidden="true" />
       {/* Заросли: ловит указатель только над стоящей травой (clip-path по профилю). */}
       <div className="tg-hit" aria-hidden="true" />
+      <svg className="tg-flower-hit" aria-hidden="true" focusable="false">
+        <path className="tg-flower-stems" />
+        <path className="tg-flower-heads" />
+      </svg>
       <button
         ref={ui.scytheRef}
         type="button"

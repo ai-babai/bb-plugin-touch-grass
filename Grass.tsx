@@ -1,7 +1,8 @@
 import { createFireflies } from "./fireflies";
+import { createNaturalBloom } from "./meadow-bloom";
 import { type Blade, type Theme, boxHeight, buildBlades, colorFor, meadowHeight } from "./blades";
-import { drawFlowers, type Flower, FLOWER_KINDS, loadGarden, ripenBerry, saveGarden } from "./garden";
-import { advancePlants, brushPlants, leanAway, pressPlants, REACH } from "./meadow-physics";
+import { createFlowerSlots, drawFlowers, type Flower, FLOWER_KINDS, gardenCapacity, loadGarden, ripenBerry, saveGarden } from "./garden";
+import { advancePlants, brushPlants, leanAway, pressPlants, REACH, tiltFlowers } from "./meadow-physics";
 import { detectTheme } from "./meadow-theme";
 import { REGROW_MS, renderBlade, visibleShare } from "./draw-blade";
 import { useEffect, useRef } from "react";
@@ -11,6 +12,7 @@ import { createVisitors, FIRST_VISITOR_MS } from "./meadow-visitors";
 import { createPointerInput } from "./meadow-input";
 import { type Guests, type MeadowSize, scaleFor } from "./meadow-prefs";
 import { watchChatSpan } from "./meadow-reach";
+import { createFlowerHits } from "./flower-hit";
 import { createHitArea } from "./meadow-hit";
 import { createMeadowClock, type MeadowClock } from "./meadow-clock";
 import { MeadowCard } from "./MeadowCard";
@@ -138,6 +140,7 @@ export function Grass({
     let scale = scaleFor(size);
     let canopy: ReturnType<typeof watchChatSpan> | undefined;
     const hitArea = createHitArea(host.querySelector<HTMLElement>(".tg-hit"), () => draw());
+    const updateFlowerHits = createFlowerHits(host);
     let wasCut = false;
     let lush = metricsRef.current.lush;
     let activity = metricsRef.current.activity;
@@ -160,7 +163,7 @@ export function Grass({
     let lastTick = 0;
     let disposed = false;
     const pokes: { x: number; y: number; dx: number }[] = []; // в координатах холста
-    let press: { x: number; lean: number } | null = null; // палец на траве
+    let press: { x: number; y: number; lean: number } | null = null; // палец на траве
     let flowers: Flower[] = loadGarden(threadId, host.clientWidth);
     let anyCut = false;
     let regrowTimer = 0;
@@ -188,22 +191,35 @@ export function Grass({
       get width() { return width; }, get height() { return height; },
       get bladeHeight() { return mh(shown); }, get visibleUpTo() { return visibleShare(shown); },
       get blades() { return blades; },
-      get flowers() { return flowers; }, get reduced() { return reduced; },
+      get flowers() { return flowers; }, get shown() { return shown; }, get reduced() { return reduced; },
       draw: () => draw(), animate: () => schedule(), regrow: ensureRegrow,
       markCut: () => { anyCut = true; hitArea.invalidate(); },
       onPass: now => visitors.leave(now, true),
       onStroke: (x, now) => { if (visitors.near(x, 40)) visitors.scare(x, height / 2, now); },
       cutWild: (b, keep) => clock?.cut(b.x, keep * b.h, Date.now()),
-      onMowed: () => { sprout = null; clock?.restart(Date.now()); },
+      onMowed: () => { sprout = null; clock?.restart(Date.now()); naturalBloom.restart(); },
+      cutFlowers(cut) {
+        if (!cut.length) return;
+        // Один общий сад: убираем на месте, ссылки соседей (светлячок, цветение) остаются верными.
+        for (const f of cut) {
+          const i = flowers.indexOf(f);
+          if (i >= 0) flowers.splice(i, 1);
+        }
+        saveGarden(threadId, flowers);
+        naturalBloom.restart();
+        fireflies.queue(1200); // освободилось место на клумбе
+      },
     });
+    // Пчела помнит номер цветка: после среза номера остальных не сдвигаются, пока она на лугу.
+    const flowerSlots = createFlowerSlots(() => flowers, () => visitors.present());
     const visitors = createVisitors({
       bounds: () => ({ width, height, meadow: mh(shown) }),
-      flowerHeads: () => flowers.map(f => (f.hx !== undefined && f.hy !== undefined ? { x: f.hx, y: f.hy } : undefined)),
+      flowerHeads: () => flowerSlots.heads(),
       activity: () => activity,
       guests: () => guests,
       canArrive: () => document.visibilityState !== "hidden" && !flipped && !mowing.running,
       reduced: () => reduced,
-      pollinate: (i, animate) => { if (ripenBerry(flowers[i], animate ? performance.now() : 0)) saveGarden(threadId, flowers); },
+      pollinate: (i, animate) => { if (ripenBerry(flowerSlots.at(i), animate ? performance.now() : 0)) saveGarden(threadId, flowers); },
       animate: () => schedule(),
       redraw: () => draw(),
     });
@@ -212,15 +228,8 @@ export function Grass({
       element: canvas.parentElement ?? host,
       read: () => ({ width, growth: growTo, full: mh(shown), reduced, flowers }),
       onBloom(x) {
-        const flower: Flower = {
-          at: x / width,
-          kind: Math.floor(Math.random() * FLOWER_KINDS.length),
-          born: reduced ? 0 : performance.now(),
-          bend: 0,
-          vel: 0,
-        };
-        flowers.push(flower);
-        saveGarden(threadId, flowers);
+        plant(x / width);
+        naturalBloom.restart();
         if (!reduced) {
           // Трава расступается от вспышки.
           for (const b of blades) {
@@ -229,6 +238,33 @@ export function Grass({
             b.vel += Math.sign(d || 1) * 3.2 * Math.exp(-((d / 60) ** 2) * 2) * b.pliancy;
           }
         }
+        draw();
+        schedule();
+      },
+    });
+
+    /** Новый цветок в доле ширины at: светлячок или естественное цветение. Раскрывается анимацией, если движение не уменьшено. */
+    const plant = (at: number, wild = false) => {
+      const kinds = wild && flowers.length ? FLOWER_KINDS.length : FLOWER_KINDS.length - 1;
+      const flower: Flower = {
+        at,
+        kind: Math.floor(Math.random() * kinds),
+        born: reduced ? 0 : performance.now(),
+        bend: 0,
+        vel: 0,
+      };
+      if (flower.kind === FLOWER_KINDS.length - 1) flower.ripe = 0;
+      flowers.push(flower);
+      saveGarden(threadId, flowers);
+    };
+
+    const naturalBloom = createNaturalBloom({
+      threadId,
+      hasRoom: () => flowers.length + Number(fireflies.sleeping) < gardenCapacity(growTo),
+      open: () => document.visibilityState !== "hidden" && !flipped && !mowing.running && width >= 60,
+      spots: () => flowers.map(f => f.at),
+      bloom(at) {
+        plant(at, true);
         draw();
         schedule();
       },
@@ -250,6 +286,7 @@ export function Grass({
       canvas.style.height = `${height}px`;
       hitArea.invalidate();
       if (widthChanged) {
+        naturalBloom.check();
         blades = buildBlades(threadId, width, theme, lush);
         fireflies.resize(width);
         if (width >= 60) fireflies.queue(FIRST_FIREFLY_MS);
@@ -295,6 +332,7 @@ export function Grass({
       anyCut ||= wildGrowing;
       drawFlowers(ctx, flowers, width, full, ground, shown, theme === "dark");
       updateHitArea(full, visibleUpTo, now);
+      if (canopy) updateFlowerHits(flowers, width, full, shown, now);
       fireflies.place(full);
       const dark = theme === "dark";
       mowing.paint(ctx, now, dark);
@@ -333,7 +371,7 @@ export function Grass({
       if (visitors.step(now, dt)) active = true;
       if (advancePlants(blades, flowers, dt, now)) active = true;
       if (press) {
-        pressPlants(blades, flowers, press.x, press.lean, width, dt); // палец держит траву
+        pressPlants(blades, flowers, press.x, press.y, press.lean, width, dt); // палец держит траву и цветы
         active = true;
       }
 
@@ -351,6 +389,7 @@ export function Grass({
 
     const straighten = () => {
       for (const blade of blades) blade.bend = 0;
+      for (const f of flowers) f.bend = 0;
       draw();
     };
 
@@ -377,16 +416,17 @@ export function Grass({
           const weight = Math.max(0, 1 - Math.abs(distance) / REACH);
           blade.bend = py >= height - full * blade.h - 6 ? Math.sign(distance) * weight * 0.65 : 0;
         }
+        tiltFlowers(flowers, px, py, width, REACH);
         draw();
       },
       straighten,
-      press(x, lean) {
+      press(x, y, lean) {
         if (reduced) {
-          leanAway(blades, x); // неподвижно, без укладывания по свайпу
+          leanAway(blades, flowers, x, y, width); // неподвижно, без укладывания по свайпу
           draw();
           return;
         }
-        press = { x, lean };
+        press = { x, y, lean };
         schedule();
       },
       release() {
@@ -423,6 +463,7 @@ export function Grass({
     };
 
     const onVisibility = () => {
+      naturalBloom.check();
       if (document.visibilityState === "hidden") {
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
@@ -471,6 +512,7 @@ export function Grass({
         }
         resize();
         schedule();
+        naturalBloom.check();
         fireflies.queue(1200); // в подросшем луге появилось место для цветка
       },
       setSize(next: MeadowSize) {
@@ -478,6 +520,7 @@ export function Grass({
         size = next;
         configureCanopy();
         configureClock();
+        naturalBloom.check();
         hitArea.invalidate();
         resize();
         draw();
@@ -497,6 +540,7 @@ export function Grass({
       setFlipped(next: boolean) {
         if (next === flipped) return;
         flipped = next;
+        naturalBloom.check();
         input.reset();
         if (flipped) {
           // Лицевая сторона скрыта: кадры не нужны.
@@ -564,6 +608,7 @@ export function Grass({
       if (regrowTimer) window.clearInterval(regrowTimer);
       visitors.dispose();
       fireflies.dispose();
+      naturalBloom.dispose();
       flowers = [];
       blades = [];
       pokes.length = 0;

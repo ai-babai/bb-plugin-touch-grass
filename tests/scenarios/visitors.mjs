@@ -1,7 +1,7 @@
 // Visitors: a bee comes to flowers, a butterfly to the grass; they shy away from the
 // pointer and the mower, can be switched off, and keep still with reduced motion.
 import assert from "node:assert/strict";
-import { COLORS, KEY, turns, withMeadow } from "../harness/meadow.mjs";
+import { CLOCK_START, COLORS, KEY, turns, withMeadow } from "../harness/meadow.mjs";
 
 const flowerBed = (extra = {}) => ({
   rows: turns(50),
@@ -97,7 +97,8 @@ export default [
     }
     assert.ok(distance > 30, "the butterfly crosses the grass");
   })],
-  ["a butterfly visits the grass; switched off it disappears and nobody comes", ctx => withMeadow(ctx, { rows: turns(50) }, async m => {
+  // The next wildflower is due after the observation, keeping this bed empty.
+  ["a butterfly visits the grass; switched off it disappears and nobody comes", ctx => withMeadow(ctx, { rows: turns(50), random: 0.15, storage: { [KEY.bloom]: String(CLOCK_START + 120_000) } }, async m => {
     await predictable(m);
     await m.run(7000);
     assert.ok(await butterfly(m), "without flowers a butterfly comes");

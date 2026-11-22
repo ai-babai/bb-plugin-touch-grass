@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 
 export const THREAD = "thr_meadow";
 export const ORIGIN = "http://bb.test";
-export const KEY = { size: "bb-touch-grass:size", guests: "bb-touch-grass:guests", garden: `bb-touch-grass:garden:${THREAD}` };
+export const KEY = { size: "bb-touch-grass:size", guests: "bb-touch-grass:guests", garden: `bb-touch-grass:garden:${THREAD}`, bloom: `bb-touch-grass:bloom:${THREAD}` };
+/** Start of the fake clock; bloom storage contains the next deadline. */
+export const CLOCK_START = Date.parse("2026-11-21T12:00:00Z");
 export const COLORS = {
   bee: "#efb62a",
   butterflies: ["#f4f1e6", "#e98a3a", "#7ea7e6", "#f2d64b"],
@@ -27,6 +29,7 @@ body{margin:0;font:14px system-ui;background:var(--background)}
 
 function seedPage({ seed, storage, blockStorage }) {
   window.__seed = seed;
+  if (seed.random !== undefined) Math.random = () => seed.random;
   if (blockStorage) {
     Storage.prototype.getItem = () => { throw new DOMException("denied", "SecurityError"); };
     Storage.prototype.setItem = () => { throw new DOMException("denied", "SecurityError"); };
@@ -66,9 +69,9 @@ export async function openMeadow(ctx, options = {}) {
     return route.fulfill({ body: pageHtml(lang), contentType: "text/html" });
   });
   const storage = { ...(size ? { [KEY.size]: size } : {}), ...options.storage };
-  const seed = { threads: threads ?? { [THREAD]: rows }, scope, background };
+  const seed = { threads: threads ?? { [THREAD]: rows }, scope, background, random: options.random };
   await page.addInitScript(seedPage, { seed, storage, blockStorage });
-  if (clock) await page.clock.install({ time: new Date("2026-11-21T12:00:00Z") });
+  if (clock) await page.clock.install({ time: new Date(CLOCK_START) });
   await page.goto(`${ORIGIN}/projects/demo/threads/${THREAD}`);
   if (waitFor === "canvas") await meadow.ready();
   return meadow;

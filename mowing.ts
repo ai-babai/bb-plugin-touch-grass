@@ -1,5 +1,6 @@
 import type { Blade } from "./blades";
-import type { Flower } from "./garden";
+import { type Flower, FLOWER_KINDS, flowerShape } from "./garden";
+import { scytheHitsFlower } from "./flower-cut";
 import { bladeLength, regrowth, STUBBLE, visibleBladeHeight } from "./draw-blade";
 import { drawMower, tallBoost } from "./meadow-critters";
 
@@ -17,6 +18,8 @@ interface MowingSite {
   readonly visibleUpTo: number;
   readonly blades: Blade[];
   readonly flowers: Flower[];
+  /** Доля показанного луга: от неё зависит размер головок цветов. */
+  readonly shown: number;
   readonly reduced: boolean;
   draw(): void;
   animate(): void;
@@ -28,10 +31,12 @@ interface MowingSite {
   cutWild(b: Blade, keep: number): void;
   /** Полный проход косилки (или мгновенный покос) завершён. */
   onMowed(): void;
+  /** Срезанные цветы: убрать из общего сада и сохранить его. */
+  cutFlowers(cut: Flower[]): void;
 }
 
 export function createMowing(site: MowingSite) {
-  let mower: { x: number; dir: number; start: number; from: number; to: number; speed: number; spare: number[] } | null = null;
+  let mower: { x: number; dir: number; start: number; from: number; to: number; speed: number } | null = null;
   let mowDir = 1;
   let selfMowAt: { x: number; y: number } | null = null; // прошлая точка косы, px холста
   const clippings: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
@@ -64,27 +69,46 @@ export function createMowing(site: MowingSite) {
     return Math.min(grown, Math.max(SCYTHE_MIN_PX / fullLength, (grown * Math.max(0, blade)) / top));
   };
 
-  const throwClipping = (b: Blade, x: number) => {
-    if (site.reduced || clippings.length > 60 || Math.random() > 0.3) return;
+  const fling = (x: number, y: number, color: string) => {
     clippings.push({
       x,
-      y: site.height - Math.max(3, site.bladeHeight * b.h * 0.4),
+      y,
       vx: (Math.random() - 0.5) * 40 - (mower ? mower.dir * 25 : 0),
       vy: -25 - Math.random() * 35,
       life: 0.5 + Math.random() * 0.4,
-      color: b.fill,
+      color,
     });
   };
 
-  const flowerXs = () => site.flowers.map(f => f.at * site.width);
+  const throwClipping = (b: Blade, x: number) => {
+    if (site.reduced || clippings.length > 60 || Math.random() > 0.3) return;
+    fling(x, site.height - Math.max(3, site.bladeHeight * b.h * 0.4), b.fill);
+  };
+
+  const shapeOf = (f: Flower, now: number) => flowerShape(f, site.width, site.bladeHeight, site.height, site.shown, now);
+
+  /** Убирает цветы из сада; лепестки разлетаются, если движение не уменьшено. */
+  const removeFlowers = (cut: Flower[], now: number) => {
+    if (!cut.length) return;
+    if (!site.reduced) {
+      for (const f of cut) {
+        const { headX, headY } = shapeOf(f, now);
+        for (let i = 0; i < 5; i++) fling(headX, headY, FLOWER_KINDS[f.kind].petal);
+      }
+    }
+    site.cutFlowers(cut);
+  };
+
+  /** Цветы, которые коса не задела: трава у их стебля остаётся. */
+  const survivorXs = (cut: Flower[]) => site.flowers.filter(f => !cut.includes(f)).map(f => f.at * site.width);
 
   const mow = () => {
     if (mower || !site.width) return;
     const now = performance.now();
-    const spare = flowerXs();
     site.onPass(now);
     if (site.reduced) {
-      for (const b of site.blades) cutBlade(b, now, spare);
+      removeFlowers(site.flowers.slice(), now); // косилка убирает и цветы на своём пути
+      for (const b of site.blades) cutBlade(b, now, []);
       site.onMowed();
       site.markCut();
       site.draw();
@@ -97,7 +121,7 @@ export function createMowing(site: MowingSite) {
     const from = dir > 0 ? -off : site.width + off;
     const to = dir > 0 ? site.width + off : -off;
     const seconds = Math.max(2.2, Math.min(4.5, site.width / 170));
-    mower = { x: from, dir, start: now, from, to, speed: (to - from) / seconds / 1000, spare };
+    mower = { x: from, dir, start: now, from, to, speed: (to - from) / seconds / 1000 };
     site.animate();
   };
 
@@ -109,12 +133,10 @@ export function createMowing(site: MowingSite) {
     for (const b of site.blades) {
       if (b.cutAt >= mower.start) continue;
       if (mower.dir * (b.x - front) > 0) continue;
-      if (cutBlade(b, now, mower.spare)) throwClipping(b, b.x);
+      if (cutBlade(b, now, [])) throwClipping(b, b.x);
     }
-    for (const f of site.flowers) {
-      const d = f.at * site.width - mower.x;
-      if (Math.abs(d) < 14 * tallBoost(site.height)) f.vel += mower.dir * 0.12; // цветы покачиваются, но остаются
-    }
+    const pass = mower;
+    removeFlowers(site.flowers.filter(f => pass.dir * (f.at * site.width - front) <= 0), now);
     site.markCut();
     if (mower.dir * (mower.x - mower.to) >= 0) {
       mower = null;
@@ -132,8 +154,10 @@ export function createMowing(site: MowingSite) {
     const hi = Math.max(from.x, px) + SELF_MOW_REACH;
     const span = px - from.x;
     const heightAt = (x: number) => from.y + (py - from.y) * (span ? Math.min(1, Math.max(0, (x - from.x) / span)) : 1);
-    const spare = flowerXs();
-    let cut = false;
+    const hit = site.flowers.filter(f => scytheHitsFlower(shapeOf(f, now), site.height, from, { x: px, y: py }));
+    const spare = survivorXs(hit);
+    removeFlowers(hit, now);
+    let cut = hit.length > 0;
     for (const b of site.blades) {
       if (b.x < lo || b.x > hi) continue;
       const keep = keepBelow(b, heightAt(b.x), now);
@@ -171,7 +195,8 @@ export function createMowing(site: MowingSite) {
       clippings.length = 0;
       if (mower) {
         const now = performance.now();
-        for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now, mower.spare);
+        for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now, []);
+        site.cutFlowers([...site.flowers]);
         mower = null;
         site.onMowed();
       }

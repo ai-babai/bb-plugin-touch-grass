@@ -1,8 +1,10 @@
+import { bushShape, drawStrawberryBush, LEAF, STRAWBERRY } from "./strawberry";
+
 export const BLOOM_MS = 800;
-const RIPEN_MS = 1200;
 /**
- * ripe — у земляники завязалась ягода: время начала покраснения, 0 — уже спелая.
- * В саду хранится однократно как `ripe: true`; старые записи без поля — цветок без ягоды.
+ * kind=4 — не цветок, а низкий кустик земляники (strawberry.ts).
+ * ripe — у земляники ягоды опылены: время начала покраснения, 0 — уже спелые.
+ * В саду хранится однократно как `ripe: true`; без поля — кустик с зелёными ягодами.
  */
 export type Flower = { at: number; kind: number; born: number; bend: number; vel: number; hx?: number; hy?: number; ripe?: number };
 
@@ -11,10 +13,8 @@ export const FLOWER_KINDS = [
   { petal: "#5d82d8", center: "#2c3d78", n: 7, long: 1.35, wide: 0.55 }, // василёк
   { petal: "#d97ba7", center: "#b0557e", n: 10, long: 0.95, wide: 0.6 }, // клевер
   { petal: "#f3c531", center: "#c58b12", n: 5, long: 1.0, wide: 0.85 }, // лютик
-  { petal: "#f7f4ec", center: "#d9c64a", n: 5, long: 1.0, wide: 0.95 }, // земляника
+  { petal: LEAF, center: LEAF, n: 3, long: 1.0, wide: 0.7 }, // земляника: кустик, рисует strawberry.ts; petal — цвет обрезков
 ];
-const STRAWBERRY = 4;
-const BERRY = { red: "#d8333b", sepal: "#4c8a36", seed: "#f2d27a" };
 
 export function gardenCapacity(growth: number) {
   return 3 + Math.round(growth * 9);
@@ -59,52 +59,59 @@ export function ripenBerry(flower: Flower | undefined, now: number) {
   return true;
 }
 
-const SEEDS = [[-0.35, -0.05], [0.35, -0.05], [0, 0.15], [-0.18, 0.35], [0.18, 0.35]];
+/** Где сейчас цветок в px холста: основание стебля, головка и её радиус. Общая мера для рисунка и покоса. */
+export type FlowerShape = { x: number; headX: number; headY: number; r: number; stem: number; bend: number; open: number };
 
-/** Ягода свисает сбоку от цветка: зелёная завязь краснеет, проступают семена. */
-function drawBerry(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, ripe: number, now: number) {
-  const p = ripe ? Math.min(1, (now - ripe) / RIPEN_MS) : 1;
-  const w = r * 0.8;
-  const top = -r * 0.6;
-  ctx.save();
-  ctx.translate(x + r * 0.95, y + r * 1.4);
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.95, -r * 1.4);
-  ctx.quadraticCurveTo(0, -r * 1.4, 0, top);
-  ctx.strokeStyle = BERRY.sepal;
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, top);
-  ctx.bezierCurveTo(w, top * 1.1, w * 0.75, r * 0.35, 0, r * 0.7);
-  ctx.bezierCurveTo(-w * 0.75, r * 0.35, -w, top * 1.1, 0, top);
-  ctx.fillStyle = p < 1 ? `hsl(${85 * (1 - p)}, ${45 + 22 * p}%, ${68 - 15 * p}%)` : BERRY.red;
-  ctx.fill();
-  if (p > 0.6) {
-    ctx.fillStyle = BERRY.seed;
-    for (const [sx, sy] of SEEDS) ctx.fillRect(sx * w - 0.35, sy * r * 1.3 - 0.35, 0.7, 0.7);
-  }
-  ctx.fillStyle = BERRY.sepal;
-  for (let i = 0; i < 5; i++) {
-    ctx.beginPath();
-    ctx.ellipse(0, top, w * 0.55, w * 0.18, (Math.PI / 5) * i - Math.PI / 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
+export function flowerShape(f: Flower, width: number, full: number, ground: number, shown: number, now: number): FlowerShape {
+  const x = f.at * width;
+  const bloom = f.born ? Math.min(1, (now - f.born) / BLOOM_MS) : 1;
+  const open = 1 - Math.pow(1 - bloom, 3);
+  const stem = Math.max(10, full * 0.6) * (0.45 + 0.55 * open);
+  const bend = Math.max(-1, Math.min(1, f.bend));
+  if (f.kind === STRAWBERRY) return bushShape(x, ground, full, shown, open, bend);
+  return {
+    x, stem, bend, open,
+    headX: x + bend * stem * 0.5,
+    headY: ground - stem * (1 - 0.15 * bend * bend),
+    r: (2.7 + 1.9 * shown) * open,
+  };
 }
 
+/**
+ * Номера цветов для посетителей. Пчела помнит номер своего цветка; если цветок срезан,
+ * его номер пустеет (пчела выбирает другой), а номера остальных не сдвигаются, пока
+ * на лугу есть посетитель. Без посетителей нумерация снова совпадает с садом.
+ */
+export function createFlowerSlots(list: () => Flower[], busy: () => boolean) {
+  let slots: (Flower | null)[] = [];
+  const sync = () => {
+    const now = list();
+    if (!busy()) {
+      slots = now.slice();
+      return slots;
+    }
+    slots = slots.map(f => (f && now.includes(f) ? f : null));
+    for (const f of now) if (!slots.includes(f)) slots.push(f);
+    return slots;
+  };
+  return {
+    heads: () => sync().map(f => (f?.hx !== undefined && f.hy !== undefined ? { x: f.hx, y: f.hy } : undefined)),
+    at: (i: number) => sync()[i] ?? undefined,
+  };
+}
 
 export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], width: number, full: number, ground: number, shown: number, dark: boolean) {
   if (!flowers.length) return;
   const now = performance.now();
   for (const f of flowers) {
-    const x = f.at * width;
-    const bloom = f.born ? Math.min(1, (now - f.born) / BLOOM_MS) : 1;
-    const open = 1 - Math.pow(1 - bloom, 3);
-    const stem = Math.max(10, full * 0.6) * (0.45 + 0.55 * open);
-    const bend = Math.max(-1, Math.min(1, f.bend));
-    const headX = x + bend * stem * 0.5;
-    const headY = ground - stem * (1 - 0.15 * bend * bend);
+    const shape = flowerShape(f, width, full, ground, shown, now);
+    const { x, stem, bend, headX, headY, r } = shape;
+    if (f.kind === STRAWBERRY) {
+      f.hx = headX;
+      f.hy = headY;
+      drawStrawberryBush(ctx, shape, ground, f.at, f.ripe, now, dark);
+      continue;
+    }
     ctx.beginPath();
     ctx.moveTo(x, ground + 0.5);
     ctx.quadraticCurveTo(x + bend * stem * 0.1, ground - stem * 0.5, headX, headY);
@@ -114,7 +121,6 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
     f.hx = headX;
     f.hy = headY;
     const kind = FLOWER_KINDS[f.kind];
-    const r = (2.7 + 1.9 * shown) * open;
     if (r < 0.3) continue;
     ctx.save();
     ctx.translate(headX, headY);
@@ -132,6 +138,5 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
     ctx.fillStyle = kind.center;
     ctx.fill();
     ctx.restore();
-    if (f.ripe !== undefined) drawBerry(ctx, headX, headY, r, f.ripe, now);
   }
 }
