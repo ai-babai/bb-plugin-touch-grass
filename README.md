@@ -10,7 +10,7 @@ created: "2026-11-22"
 
 [Русский](README.ru.md) · [Touch Grass on popkov.dev](https://popkov.dev/en/apps/touch-grass/)
 
-A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
+It's time to touch grass. A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
 ![A mower crossing a mature meadow and leaving the flowers standing](docs/media/mower.gif)
 
@@ -34,7 +34,7 @@ Butterflies visit the grass. Once flowers bloom, bees can land on them. A bee la
 
 ![Mobile meadow settings with the growth slider, countdown and Grow now button](docs/media/settings.png)
 
-In **Overgrown**, the grass grows over the messages to about one third of the visible chat. Tap the standing blades to press them down. Cut a path with the scythe and you can tap links through that opening. The mower clears the full width. The mower, bee and butterfly appear larger in this mode.
+**Overgrown** is the default for a new installation. In this mode, the grass grows over the messages to about one third of the visible chat. Tap the standing blades to press them down. Cut a path with the scythe and you can tap links through that opening. The mower clears the full width. The mower, bee and butterfly appear larger in this mode.
 
 An Overgrown plot starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open the meadow settings to see the countdown. Drag the slider to choose a 20-, 40- or 60-minute growth period. Choose **Grow now** to fill this chat with tall grass immediately. Mowing starts the timer again.
 
@@ -50,7 +50,7 @@ An Overgrown plot starts short. It reaches full height in **40 minutes of real t
 
 In Compact and Tall, growth follows conversation steps. Five steps give about 29% of the journey from sprouts to mature grass, 20 give 67%, and 50 give 100%. Leaving the chat open keeps its grass at the same height. Each thread has its own blade pattern.
 
-The plugin reads BB’s local event log. The server sends the meadow two numbers for cache and tool activity. Flowers are stored per thread in this BB client. Size and visitor preferences apply across chats. Controls use English by default and Russian in a Russian-language BB document.
+The plugin reads BB’s local event log. The server sends the meadow two numbers for cache and tool activity. Flowers are stored per thread in this BB client. Size, regrowth period and visitor preferences apply across chats on this device. Controls use English by default and Russian in a Russian-language BB document.
 
 ## Overgrown gallery
 

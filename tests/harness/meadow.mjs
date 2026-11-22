@@ -48,7 +48,9 @@ function seedPage({ seed, storage, blockStorage }) {
 }
 
 export async function openMeadow(ctx, options = {}) {
-  const { rows = turns(12), threads, scope, storage = {}, background, blockStorage = false, clock = true,
+  // `size` is the meadow size the user saved earlier. Scenarios of the turn-based meadow
+  // run in Compact unless they pass another size; `size: null` opens like a first install.
+  const { rows = turns(12), threads, scope, size = "compact", background, blockStorage = false, clock = true,
     viewport = { width: 1100, height: 760 }, reducedMotion = "no-preference", colorScheme = "light",
     hasTouch = false, isMobile = false, deviceScaleFactor = 1, waitFor = "canvas", lang = "ru" } = options;
   const context = await ctx.browser.newContext({ viewport, reducedMotion, colorScheme, hasTouch, isMobile, deviceScaleFactor });
@@ -63,6 +65,7 @@ export async function openMeadow(ctx, options = {}) {
     if (path === "/page.css") return route.fulfill({ body: ctx.assets.css, contentType: "text/css" });
     return route.fulfill({ body: pageHtml(lang), contentType: "text/html" });
   });
+  const storage = { ...(size ? { [KEY.size]: size } : {}), ...options.storage };
   const seed = { threads: threads ?? { [THREAD]: rows }, scope, background };
   await page.addInitScript(seedPage, { seed, storage, blockStorage });
   if (clock) await page.clock.install({ time: new Date("2026-11-21T12:00:00Z") });

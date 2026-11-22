@@ -73,16 +73,45 @@ export default [
     assert.ok(await chip(m, "Size: tall").isVisible());
   })],
 
+  ["a first install opens Overgrown; an explicit choice is saved and kept", async ctx => {
+    let saved;
+    await withMeadow(ctx, { size: null, rows: turns(0) }, async m => {
+      assert.equal(await m.storage(KEY.size), null, "nothing is written just by opening");
+      await m.run(60_000);
+      assert.ok(await m.height() > 150, `Overgrown canopy over the chat even without turns: ${await m.height()}`);
+      await m.toggle.click();
+      assert.equal(await pressed(m, "Размер: заросли"), "true");
+      await chip(m, "Размер: высокий").click();
+      saved = await m.storage(KEY.size);
+      await m.page.keyboard.press("Escape");
+      await m.run(50);
+      const tall = await m.height();
+      assert.ok(tall <= 72, `Tall strip after choosing it: ${tall}`);
+      await m.reload();
+      assert.equal(await m.height(), tall, "the choice survives a reload");
+    });
+    assert.equal(saved, "full");
+    for (const size of ["compact", "full"]) await withMeadow(ctx, { size }, async m => {
+      await m.toggle.click();
+      assert.equal(await pressed(m, size === "full" ? "Размер: высокий" : "Размер: компактный"), "true", `saved ${size} is kept`);
+    });
+  }],
+
   ["damaged saved settings fall back to defaults", ctx => withMeadow(ctx, {
     storage: { [KEY.size]: "huge", [KEY.guests]: "{not json" },
   }, async m => {
     await m.toggle.click();
-    assert.equal(await pressed(m, "Размер: компактный"), "true");
+    assert.equal(await pressed(m, "Размер: заросли"), "true", "an unknown size opens like a first install");
     assert.equal(await pressed(m, "Пчела"), "true");
     assert.equal(await pressed(m, "Бабочка"), "true");
   })],
 
   ["blocked storage still lets the user change settings for the session", ctx => withMeadow(ctx, { blockStorage: true, rows: turns(20) }, async m => {
+    await m.toggle.click();
+    assert.equal(await pressed(m, "Размер: заросли"), "true", "nothing saved: the default Overgrown");
+    await chip(m, "Размер: компактный").click();
+    await m.page.keyboard.press("Escape");
+    await m.run(50);
     const compact = await m.height();
     await m.toggle.click();
     await chip(m, "Размер: высокий").click();

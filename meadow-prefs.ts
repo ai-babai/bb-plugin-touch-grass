@@ -50,7 +50,8 @@ export function saveRegrowMinutes(minutes: number) {
 
 export function loadSize(): MeadowSize {
   const saved = read(SIZE_KEY);
-  return MEADOW_SIZES.find(size => size === saved) ?? "compact";
+  // Первое открытие — «Заросли»; явно сохранённый выбор (в том числе compact и full) остаётся.
+  return MEADOW_SIZES.find(size => size === saved) ?? "overgrown";
 }
 
 export function saveSize(size: MeadowSize) {

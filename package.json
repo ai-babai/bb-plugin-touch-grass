@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-touch-grass",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "engines": {
     "bb": ">=0.50",
@@ -45,5 +45,9 @@
     "type": "git",
     "url": "git+https://github.com/ai-babai/bb-plugin-touch-grass.git"
   },
-  "private": true
+  "private": true,
+  "homepage": "https://popkov.dev/en/apps/touch-grass/",
+  "bugs": {
+    "url": "https://github.com/ai-babai/bb-plugin-touch-grass/issues"
+  }
 }
