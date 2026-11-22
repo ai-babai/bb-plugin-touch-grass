@@ -24,13 +24,11 @@ It's time to touch grass. A little meadow grows above the message box in each [B
 | Mow the whole lawn | Press the mower on the right. It clears the grass, flowers and strawberry plants across the strip. The grass then grows back over the period set in the meadow settings. |
 | Choose the size and visitors | Tap the sliders on the right to turn the meadow over. Choose **Compact**, **Tall** or **Overgrown**, and allow bees, butterflies or both. Tap the same spot to flip back. On a keyboard, press **Esc**. |
 
-![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
+![In a dark BB chat, the scythe cuts a path through the meadow at mid-height and a message line appears](docs/media/scythe.gif)
 
 Some flowers grow in small clumps. A yellow dandelion ripens into a white seed head. Brush it back and forth to send a few seeds drifting.
 
 With the scythe put away, swipe up or down over the grass to scroll the chat. Press a flower and sweep sideways to bend its stem along with the grass. They spring back when you let go.
-
-![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/wildflowers-dark.png">
@@ -49,7 +47,7 @@ Butterflies visit the grass. Bees wait for open petals. A closed bud or a white 
 
 Every meadow starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open settings in any size to see the countdown above the size controls. Choose any whole minute from 5 to 90. The slider marks 5, 15, 40 and 90 minutes, giving shorter periods more room for fine adjustments. Choose **Grow now** to bring the grass to full height in the selected size. Mowing starts the timer again.
 
-![Grass grows on demand and a mower clears it to reveal the chat messages](docs/media/overgrown.gif)
+![In a dark BB chat, Grow now raises the meadow over the messages, then the mower clears it to reveal them](docs/media/overgrown.gif)
 
 ## What shapes the grass?
 
