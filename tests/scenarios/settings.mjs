@@ -6,10 +6,12 @@ const focused = m => m.page.evaluate(() => document.activeElement?.getAttribute(
 const chip = (m, name) => m.page.getByRole("button", { name, exact: true });
 const pressed = (m, name) => chip(m, name).getAttribute("aria-pressed");
 const expanded = m => m.toggle.getAttribute("aria-expanded");
+// Measure the chosen layout height independently of the card’s in-flight 3D rotation.
+const layoutHeight = m => m.canvas.evaluate(canvas => canvas.clientHeight);
 
 export default [
   ["the toggle opens settings, Escape closes them in place; choices persist", ctx => withMeadow(ctx, { rows: turns(20) }, async m => {
-    const compact = await m.height();
+    const compact = await layoutHeight(m);
     await m.bb(() => {
       window.leaked = [];
       document.addEventListener("keydown", e => window.leaked.push(e.key));
@@ -41,13 +43,13 @@ export default [
     assert.deepEqual(await m.bb(() => window.leaked), ["Tab"], "Escape does not reach the chat");
     await m.page.keyboard.press("Escape");
     assert.deepEqual(await m.bb(() => window.leaked), ["Tab", "Escape"], "a closed meadow leaves Escape to the chat");
-    const tall = await m.height();
+    const tall = await layoutHeight(m);
     assert.ok(tall > compact * 1.5, `tall meadow: ${compact} -> ${tall}`);
     assert.equal(await m.storage(KEY.size), "full");
     assert.deepEqual(JSON.parse(await m.storage(KEY.guests)), { bee: false, butterfly: true });
 
     await m.reload();
-    assert.equal(await m.height(), tall, "size survives a reload");
+    assert.equal(await layoutHeight(m), tall, "size survives a reload");
     await m.toggle.click();
     assert.equal(await pressed(m, "Пчела"), "false");
     assert.equal(await pressed(m, "Бабочка"), "true");
@@ -55,7 +57,7 @@ export default [
     await m.toggle.click();
     await m.run(50);
     assert.equal(await expanded(m), "false");
-    assert.equal(await m.height(), compact);
+    assert.equal(await layoutHeight(m), compact);
   })],
 
   ["with reduced motion the sides swap instantly", ctx => withMeadow(ctx, { reducedMotion: "reduce" }, async m => {
@@ -78,17 +80,17 @@ export default [
     await withMeadow(ctx, { size: null, rows: turns(0) }, async m => {
       assert.equal(await m.storage(KEY.size), null, "nothing is written just by opening");
       await m.run(60_000);
-      assert.ok(await m.height() > 150, `Overgrown canopy over the chat even without turns: ${await m.height()}`);
+      assert.ok(await layoutHeight(m) > 150, `Overgrown canopy over the chat even without turns: ${await layoutHeight(m)}`);
       await m.toggle.click();
       assert.equal(await pressed(m, "Размер: заросли"), "true");
       await chip(m, "Размер: высокий").click();
       saved = await m.storage(KEY.size);
       await m.page.keyboard.press("Escape");
       await m.run(50);
-      const tall = await m.height();
+      const tall = await layoutHeight(m);
       assert.ok(tall <= 72, `Tall strip after choosing it: ${tall}`);
       await m.reload();
-      assert.equal(await m.height(), tall, "the choice survives a reload");
+      assert.equal(await layoutHeight(m), tall, "the choice survives a reload");
     });
     assert.equal(saved, "full");
     for (const size of ["compact", "full"]) await withMeadow(ctx, { size }, async m => {
@@ -112,13 +114,13 @@ export default [
     await chip(m, "Размер: компактный").click();
     await m.page.keyboard.press("Escape");
     await m.run(50);
-    const compact = await m.height();
+    const compact = await layoutHeight(m);
     await m.toggle.click();
     await chip(m, "Размер: высокий").click();
     await chip(m, "Бабочка").click();
     assert.equal(await pressed(m, "Бабочка"), "false");
     await m.page.keyboard.press("Escape");
     await m.run(50);
-    assert.ok(await m.height() > compact);
+    assert.ok(await layoutHeight(m) > compact);
   })],
 ];
