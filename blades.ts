@@ -14,9 +14,7 @@ export type Blade = {
   satRoll: number;
   lightRoll: number;
   seed: boolean; // колосок
-  cutAt: number; // время покоса, 0 — не скошена
-  cutTo?: number; // доля высоты сразу после покоса; по умолчанию — стерня
-  wild?: number; // «Заросли»: доля полной высоты по часам луга (meadow-clock); cutAt тогда не используется
+  grown: number; // доля полной длины по часам луга (meadow-clock): покос, отрастание, «Вырастить сейчас»
   bend: number;
   vel: number;
   fill: string;
@@ -94,7 +92,7 @@ export function buildBlades(threadId: string, width: number, theme: Theme, lush:
         satRoll: rnd(),
         lightRoll: rnd(),
         seed: rnd() < 0.05,
-        cutAt: 0,
+        grown: 1,
         bend: 0,
         vel: 0,
         fill: "",

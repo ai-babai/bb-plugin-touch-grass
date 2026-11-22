@@ -54,7 +54,7 @@ function markBlade(bins: number[], b: Blade, h: number) {
 export function columnHeights({ blades, width, full, visibleUpTo, now }: ProfileInput): number[] {
   const bins = new Array<number>(Math.max(1, Math.ceil(width / BIN_PX))).fill(0);
   for (const b of blades) {
-    const h = bladeLength(b, full, visibleUpTo, now);
+    const h = bladeLength(b, full, visibleUpTo);
     if (h >= MIN_HIT_PX) markBlade(bins, b, h);
   }
   return bins.map((h, i) => Math.max(h, bins[i - 1] ?? 0, bins[i + 1] ?? 0));

@@ -18,10 +18,10 @@ It's time to touch grass. A little meadow grows above the message box in each [B
 
 | To… | Do this |
 | --- | --- |
-| Grow the meadow | In Compact and Tall, new inputs add height and density, up to 50 steps. In Overgrown, grass grows with elapsed time. |
+| Grow the meadow | Grass grows with elapsed time in all three sizes. Switching sizes keeps the same growth and cuts. |
 | Grow a flower | The first sprout appears after about 15 seconds. Tap a firefly or brush across it for another. Each stem grows for about ten minutes, lifting its bud into view. |
 | Cut a path | Select the scythe on the left. Sweep near the tips for a trim, near the roots for a close cut, or diagonally to leave a slope. Sweep through a flower to cut it. A pass above a shorter plant trims the grass around it. Tap the scythe again to put it away. |
-| Mow the whole lawn | Press the mower on the right. It clears the grass, flowers and strawberry plants across the strip. Compact and Tall grow back in about a minute. |
+| Mow the whole lawn | Press the mower on the right. It clears the grass, flowers and strawberry plants across the strip. The grass then grows back over the period set in the meadow settings. |
 | Choose the size and visitors | Tap the sliders on the right to turn the meadow over. Choose **Compact**, **Tall** or **Overgrown**, and allow bees, butterflies or both. Tap the same spot to flip back. On a keyboard, press **Esc**. |
 
 ![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
@@ -49,7 +49,7 @@ Butterflies visit the grass. Bees wait for open petals. A closed bud or a white 
 
 **Overgrown** is the default for a new installation. In this mode, the grass grows over the messages to about one third of the visible chat. Tap the standing blades to press them down. Cut a path with the scythe and you can tap links through that opening. The mower clears the full width. The mower, bee and butterfly appear larger in this mode.
 
-An Overgrown plot starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open the meadow settings to see the countdown. Choose any whole minute from 5 to 90. The slider marks 5, 15, 40 and 90 minutes, giving shorter periods more room for fine adjustments. Choose **Grow now** to fill this chat with tall grass immediately. Mowing starts the timer again.
+Every meadow starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open settings in any size to see the countdown above the size controls. Choose any whole minute from 5 to 90. The slider marks 5, 15, 40 and 90 minutes, giving shorter periods more room for fine adjustments. Choose **Grow now** to bring the grass to full height in the selected size. Mowing starts the timer again.
 
 ![Grass grows on demand and a mower clears it to reveal the chat messages](docs/media/overgrown.gif)
 
@@ -57,11 +57,12 @@ An Overgrown plot starts short. It reaches full height in **40 minutes of real t
 
 | Signal from the current chat | What you see |
 | --- | --- |
-| Accepted inputs or recorded turn starts | Taller, denser grass in Compact and Tall. Old chats open at their existing growth. |
+| Elapsed time since mowing | Grass grows back over the selected period in all three sizes. |
+| Conversation steps | The flower bed expands from 3 places to 12 over the first 50 steps. |
 | Share of input tokens read from cache | More emerald blades at high cache reuse, more straw tones at low reuse. Providers that haven't reported usage yet get the base palette. |
 | Tool calls among the last 24 started items | More bee visits when flowers are present. Activity reaches its maximum at 12 calls. |
 
-In Compact and Tall, growth follows conversation steps. Five steps give about 29% of the journey from sprouts to mature grass, 20 give 67%, and 50 give 100%. Leaving the chat open keeps its grass at the same height. Each thread has its own blade pattern.
+Each thread has its own blade pattern. At the default 40-minute setting, a freshly mown meadow is halfway back to full height after 20 minutes in any size.
 
 The plugin reads BB’s local event log. The server sends the meadow two numbers for cache and tool activity. Flowers are stored per thread in this BB client. Size, regrowth period and visitor preferences apply across chats on this device. Controls use English by default and Russian in a Russian-language BB document.
 

@@ -1,4 +1,5 @@
-// The meadow grows with the conversation and follows live thread updates.
+// The meadow grows with wall time (one lawn clock per thread) and follows live thread updates;
+// the number of turns never changes its height.
 import assert from "node:assert/strict";
 import { THREAD, turns, withMeadow } from "../harness/meadow.mjs";
 
@@ -14,25 +15,25 @@ export default [
     assert.ok(meadow.width > 1000 && composer.y >= meadow.y + meadow.height - 1, "meadow sits right above the composer");
   })],
 
-  ["a long chat grows a taller and denser meadow than a fresh one", async ctx => {
-    const sample = async n => {
+  ["an older lawn clock grows a taller and denser meadow than a fresh one, regardless of turns", async ctx => {
+    const sample = async (age, n = 50) => {
       let result;
-      await withMeadow(ctx, { rows: turns(n) }, async m => { result = { box: await m.height(), grass: (await m.grass())[0], cover: await m.cover() }; });
+      await withMeadow(ctx, { rows: turns(n), age, size: "full" }, async m => { result = { grass: (await m.grass())[0], cover: await m.cover() }; });
       return result;
     };
-    const fresh = await sample(0), young = await sample(3), mature = await sample(50), beyond = await sample(90);
-    assert.ok(fresh.cover > 0 && fresh.cover < young.cover && fresh.grass < young.grass, "sparse sprouts first");
-    assert.ok(mature.grass > young.grass + 10 && mature.box > young.box, "mature meadow is taller");
+    const fresh = await sample(0), young = await sample(12), mature = await sample(41), beyond = await sample(600);
+    assert.ok(fresh.cover > 0 && fresh.grass < young.grass, `stubble first, then growth: ${fresh.grass} -> ${young.grass}`);
+    assert.ok(mature.grass > young.grass + 10, `a mature lawn is taller: ${young.grass} -> ${mature.grass}`);
     assert.deepEqual(beyond, mature, "growth saturates at maturity");
   }],
 
-  ["new turns and steering grow the meadow live, without a remount", ctx => withMeadow(ctx, { rows: turns(2) }, async m => {
+  ["new turns and steering neither grow nor remount the meadow", ctx => withMeadow(ctx, { rows: turns(2), age: 12 }, async m => {
     await m.canvas.evaluate(el => { el.dataset.original = "yes"; });
-    const before = await m.height();
+    const before = await m.grass();
     await m.bb(id => window.bb.append(id, Array.from({ length: 20 }, () => ({ type: "turn/input/accepted", data: {} }))), THREAD);
     await m.run(1600);
-    const steered = await m.height();
-    assert.ok(steered > before, `steering inputs count as growth: ${before} -> ${steered}`);
+    const steered = await m.grass();
+    assert.ok(Math.abs(steered[0] - before[0]) <= 2, `steering does not change the height: ${before} -> ${steered}`);
     // Irrelevant activity does not re-read the history.
     const lists = (await turnLists(m)).length;
     await m.bb(id => window.bb.changed({ threadId: id, changes: ["events-appended"], metadata: { eventTypes: ["item/started"] } }), THREAD);
@@ -41,7 +42,7 @@ export default [
     // History rewrite, status change without metadata and reconnect all refresh it.
     await m.bb(id => window.bb.replace(id, []), THREAD);
     await m.run(1600);
-    assert.ok(await m.height() < steered, "rewritten history shrinks the meadow");
+    assert.ok(Math.abs((await m.grass())[0] - steered[0]) <= 2, "a rewritten history leaves the lawn as it is");
     await m.bb(id => window.bb.changed({ threadId: id, changes: ["status-changed"] }), THREAD);
     await m.bb(() => window.bb.reconnected());
     await m.run(300);
@@ -50,13 +51,13 @@ export default [
   })],
 
   ["switching threads remounts the meadow and releases subscriptions", ctx => withMeadow(ctx, {
-    threads: { [THREAD]: turns(2), thr_other: turns(50) },
+    threads: { [THREAD]: turns(50), thr_other: turns(50) }, ages: { [THREAD]: 5, thr_other: 600 },
   }, async m => {
-    const small = await m.height();
+    const [small] = await m.grass();
     const subscriptions = await m.bb(() => window.bb.listeners());
     await m.bb(() => window.bb.setScope({ kind: "thread", threadId: "thr_other" }));
     await m.run(2000);
-    assert.ok(await m.height() > small, "the other thread has its own, taller meadow");
+    assert.ok((await m.grass())[0] > small + 5, "the other thread has its own, older and taller lawn");
     assert.deepEqual((await m.bb(() => window.bb.listeners())).sort(), subscriptions.map(l => l.replace(THREAD, "thr_other")).sort());
     await m.bb(() => window.bb.setScope({ kind: "project" }));
     await m.run(100);

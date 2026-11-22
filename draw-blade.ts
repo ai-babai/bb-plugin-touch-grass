@@ -1,30 +1,14 @@
 import type { Blade } from "./blades";
 
 export const STUBBLE = 0.16; // доля высоты, что остаётся после покоса газонокосилкой
-export const REGROW_MS = 60_000; // полное отрастание без новых ходов
 const TALL_PX = 66; // длина травинки зрелого высокого луга
 
-/** Доля полной высоты, до которой травинка отросла после покоса. */
-export function regrowth(b: Blade, now: number) {
-  if (b.wild !== undefined) return b.wild;
-  if (!b.cutAt) return 1;
-  const p = (now - b.cutAt) / REGROW_MS;
-  const base = b.cutTo ?? STUBBLE;
-  if (p < 1) return base + (1 - base) * p * p * (3 - 2 * p);
-  b.cutAt = 0;
-  return 1;
-}
-/** Доля показанного луга, с которой видны травинки: при прорастании они появляются по порогу appear. */
-export function visibleShare(shown: number) {
-  return 0.08 + 0.92 * shown;
-}
-
 /** Длина травинки сейчас (вдоль стебля, без наклона), px: прорастание и отрастание после покоса. */
-export function bladeLength(b: Blade, full: number, visibleUpTo: number, now: number) {
+export function bladeLength(b: Blade, full: number, visibleUpTo: number) {
   if (b.appear > visibleUpTo) return 0;
   // Только что появившиеся травинки мягко подрастают.
   const emerge = Math.min(1, (visibleUpTo - b.appear) / 0.12);
-  return full * b.h * (0.35 + 0.65 * emerge) * regrowth(b, now);
+  return full * b.h * (0.35 + 0.65 * emerge) * b.grown;
 }
 
 /** Насколько верхушка поднята над землёй относительно длины: наклон её опускает. */
@@ -38,17 +22,18 @@ export function tipRise(b: Blade, bending = b.bend) {
  * Видимая высота верхушки над землёй, px — с прорастанием, отрастанием и наклоном.
  * Общая мера для рисования и ручного среза: коса режет то, что видно под пальцем.
  */
-export function visibleBladeHeight(b: Blade, full: number, visibleUpTo: number, now: number) {
-  const h = bladeLength(b, full, visibleUpTo, now);
+export function visibleBladeHeight(b: Blade, full: number, visibleUpTo: number) {
+  const h = bladeLength(b, full, visibleUpTo);
   return h < 1 ? 0 : h * tipRise(b);
 }
 
-export function renderBlade(ctx: CanvasRenderingContext2D, b: Blade, width: number, ground: number, full: number, visibleUpTo: number, seedsVisible: boolean, now: number) {
+/** Рисует травинку; true — она ниже полной длины (покос или молодой луг ещё отрастают). */
+export function renderBlade(ctx: CanvasRenderingContext2D, b: Blade, width: number, ground: number, full: number, visibleUpTo: number, seedsVisible: boolean) {
   if (b.x < -6 || b.x > width + 6) return false;
-  const h = bladeLength(b, full, visibleUpTo, now);
+  const h = bladeLength(b, full, visibleUpTo);
   if (h < 1) return false;
   paintBlade(ctx, b, h, ground, seedsVisible);
-  return b.cutAt !== 0;
+  return b.grown < 1;
 }
 
 /** Ширина травинки длиной h у основания, px. Выше обычного зрелого луга (заросли) стебли шире: силуэт густой, а не штриховой. */
@@ -79,7 +64,7 @@ function paintBlade(ctx: CanvasRenderingContext2D, b: Blade, h: number, ground: 
     ctx.lineWidth = 0.6;
     ctx.stroke();
   }
-  if (b.seed && seedsVisible && h > 26 && !b.cutAt) {
+  if (b.seed && seedsVisible && h > 26 && b.grown >= 1) {
     ctx.save();
     ctx.translate(tipX, tipY + 2);
     ctx.rotate(Math.atan2(dx, h) * 0.9);

@@ -5,19 +5,20 @@ import { KEY, turns, withMeadow } from "../harness/meadow.mjs";
 const noGuests = { [KEY.guests]: JSON.stringify({ bee: false, butterfly: false }) };
 
 export default [
-  ["the meadow sprouts on open, but appears grown at once with reduced motion", async ctx => {
+  ["opening shows the saved half-grown lawn with either motion preference", async ctx => {
     const heights = {};
     for (const reducedMotion of ["no-preference", "reduce"]) {
-      await withMeadow(ctx, { rows: turns(50), reducedMotion, waitFor: "none" }, async m => {
+      await withMeadow(ctx, { rows: turns(50), age: 20, size: "full", reducedMotion, waitFor: "none" }, async m => {
         await m.ready(150);
         const early = (await m.grass())[0];
         await m.run(2000);
         heights[reducedMotion] = [early, (await m.grass())[0]];
       });
     }
-    const [early, grown] = heights["no-preference"];
-    assert.ok(early < grown - 10, `grows in: ${early} -> ${grown}`);
-    assert.deepEqual(heights.reduce, [grown, grown], "reduced motion: full height from the first frame");
+    const [early, later] = heights["no-preference"];
+    assert.ok(early > 18 && early < 39, `Tall opens at its saved halfway height: ${early}px`);
+    assert.equal(later, early, "opening the chat does not advance the clock");
+    assert.deepEqual(heights.reduce, [early, later]);
   }],
 
   ["brushed grass sways and comes back exactly to rest", ctx => withMeadow(ctx, { rows: turns(40), random: 0.01, storage: noGuests }, async m => {
@@ -55,7 +56,7 @@ export default [
       const [cut] = await m.grass();
       await m.toggle.click();
       await m.forget();
-      await m.page.clock.fastForward(45_000);
+      await m.page.clock.fastForward(20 * 60_000); // half of the default 40-minute lawn clock
       assert.deepEqual(await m.bb(() => Object.keys(window.__seen)), [], "no meadow paint under settings");
       await m.toggle.click();
       await m.run(100);
@@ -63,7 +64,7 @@ export default [
       assert.ok(grown > cut + 8, `regrown grass appears on return: ${cut} -> ${grown}`);
     })],
 
-  ["a hidden tab draws nothing and catches up when shown again", ctx => withMeadow(ctx, { rows: turns(40), waitFor: "none" }, async m => {
+  ["a hidden tab draws nothing and catches up when shown again", ctx => withMeadow(ctx, { rows: turns(40), age: null, waitFor: "none" }, async m => {
     await m.ready(100);
     await m.bb(() => {
       Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
@@ -71,7 +72,7 @@ export default [
       document.dispatchEvent(new Event("visibilitychange"));
     });
     const growing = (await m.grass())[0];
-    await m.run(3000);
+    await m.page.clock.fastForward(40 * 60_000);
     assert.equal((await m.grass())[0], growing, "frames stop while hidden");
     await m.bb(() => {
       delete document.visibilityState;

@@ -29,7 +29,7 @@ type Props = {
   /** Высота полосы травы, px. */
   box: number;
   onMow(): void;
-  /** «Заросли»: сразу дорастить луг до зрелости. */
+  /** Сразу дорастить луг этого чата до зрелости. */
   onGrowNow(): void;
 };
 
@@ -62,7 +62,7 @@ export function MeadowCard({ ui, hostRef, canvasRef, box, onMow, onGrowNow }: Pr
         <MeadowFront ui={ui} canvasRef={canvasRef} onMow={onMow} />
         <MeadowSettings ui={ui} id={backId} />
       </div>
-      {ui.flipped && ui.size === "overgrown" && <MeadowTimer ui={ui} onGrowNow={growNow} />}
+      {ui.flipped && <MeadowTimer ui={ui} onGrowNow={growNow} />}
       <SettingsToggle ui={ui} controls={backId} />
     </div>
   );

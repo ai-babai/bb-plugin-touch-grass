@@ -44,10 +44,12 @@ export default [
     assert.deepEqual(await m.seen(COLORS.petals), [], "the mower took the flower off the bed");
     assert.deepEqual(await m.garden(), [], "and the thread remembers it");
 
-    await m.run(30_000);
+    await m.page.clock.fastForward(20 * 60_000); // mowing restarts the lawn clock: 40 minutes by default
+    await m.run(300);
     const half = await m.grass(LEFT, RIGHT);
     assert.ok(half[1] > mowed[1] + 5 && half[1] < before[1] - 5, `regrowing: ${half}`);
-    await m.run(35_000);
+    await m.page.clock.fastForward(21 * 60_000);
+    await m.run(300);
     const regrown = await m.grass(LEFT, RIGHT);
     assert.ok(regrown.every((h, i) => Math.abs(h - before[i]) <= 2), `regrown: ${before} -> ${regrown}`);
   })],
@@ -63,7 +65,7 @@ export default [
     assert.equal(await m.scytheButton.getAttribute("aria-pressed"), "false", "turning the card puts the scythe away");
   })],
 
-  ["with reduced motion the mower cuts at once; a new turn speeds up regrowth", ctx => withMeadow(ctx, {
+  ["with reduced motion the mower cuts at once; a new turn does not speed up regrowth", ctx => withMeadow(ctx, {
     ...mature, rows: turns(20), reducedMotion: "reduce",
   }, async m => {
     const before = await m.grass(LEFT, RIGHT);
@@ -73,11 +75,15 @@ export default [
     assert.deepEqual(await m.seen([COLORS.mower]), [], "no mower animation");
     const mowed = await m.grass(LEFT, RIGHT);
     assert.ok(mowed[0] < before[0] / 2 && mowed[1] < before[1] / 2, `cut at once: ${before} -> ${mowed}`);
-    await m.run(20_000);
+    await m.page.clock.fastForward(10 * 60_000);
+    await m.run(300);
     const slow = await m.grass(RIGHT);
-    await m.bb(id => window.bb.append(id, [{ type: "turn/started", data: {} }]), THREAD);
+    await m.bb(id => window.bb.append(id, Array.from({ length: 20 }, () => ({ type: "turn/started", data: {} }))), THREAD);
     await m.run(2100);
-    const fast = await m.grass(RIGHT);
-    assert.ok(fast[0] > slow[0] + 6, `the new turn pushes regrowth: ${slow} -> ${fast}`);
+    const after = await m.grass(RIGHT);
+    assert.ok(Math.abs(after[0] - slow[0]) <= 2, `turns leave regrowth on the clock: ${slow} -> ${after}`);
+    await m.page.clock.fastForward(31 * 60_000);
+    await m.run(300);
+    assert.ok((await m.grass(RIGHT))[0] >= before[1] - 2, "the clock alone finishes regrowth");
   })],
 ];

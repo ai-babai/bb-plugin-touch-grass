@@ -63,7 +63,7 @@ export default [
       await m.run(1000);
       const [trimmedAgain] = await m.grass(zones[0]);
       assert.ok(trimmedAgain <= 13, `a lower pass can immediately trim an earlier cut: ${trimmedAgain}`);
-      await m.page.clock.fastForward(65_000);
+      await m.page.clock.fastForward(41 * 60_000); // a cut regrows on the lawn clock: 40 minutes by default
       await m.run(700);
       const regrown = await m.grass(...zones);
       assert.ok(regrown.every((v, i) => Math.abs(v - before[i]) <= 2), `regrowth: ${regrown}`);

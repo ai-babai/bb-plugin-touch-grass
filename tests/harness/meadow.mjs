@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 
 export const THREAD = "thr_meadow";
 export const ORIGIN = "http://bb.test";
-export const KEY = { size: "bb-touch-grass:size", guests: "bb-touch-grass:guests", garden: `bb-touch-grass:garden:${THREAD}`, bloom: `bb-touch-grass:bloom:${THREAD}` };
+/** Lawn clock of a thread: one wall-clock growth state shared by Compact, Tall and Overgrown. */
+export const clockKey = threadId => `bb-touch-grass:overgrown:${threadId}`;
+export const KEY = { size: "bb-touch-grass:size", guests: "bb-touch-grass:guests", garden: `bb-touch-grass:garden:${THREAD}`,
+  bloom: `bb-touch-grass:bloom:${THREAD}`, clock: clockKey(THREAD), period: "bb-touch-grass:regrow-minutes" };
 /** The next natural flower is due in a day: scenarios about other things keep the bed as seeded. */
 export const NO_BLOOM = () => ({ [KEY.bloom]: String(CLOCK_START + 86_400_000) });
 
@@ -19,6 +22,11 @@ export async function awaitFirefly(m, limit = 90_000) {
 
 /** Start of the fake clock; bloom storage contains the next deadline. */
 export const CLOCK_START = Date.parse("2026-11-21T12:00:00Z");
+
+/** A lawn clock that started `minutes` before the page opens (period in minutes, no cut patches). */
+export const clockEntry = (minutes, period = 40) => JSON.stringify({ v: 1, p: period, s: CLOCK_START - minutes * 60_000, c: [] });
+/** Visual scenarios open a grown lawn: its clock started long before the default 40-minute period. */
+export const MATURE_MINUTES = 600;
 export const COLORS = {
   bee: "#efb62a",
   butterflies: ["#f4f1e6", "#e98a3a", "#7ea7e6", "#f2d64b"],
@@ -64,8 +72,12 @@ function seedPage({ seed, storage, blockStorage }) {
 }
 
 export async function openMeadow(ctx, options = {}) {
-  // `size` is the meadow size the user saved earlier. Scenarios of the turn-based meadow
-  // run in Compact unless they pass another size; `size: null` opens like a first install.
+  // `size` is the meadow size the user saved earlier: Compact unless a scenario passes another;
+  // `size: null` opens like a first install.
+  // `age` is how many minutes ago the lawn clock of every seeded thread started: a grown lawn by
+  // default, so that visual scenarios see mature grass. `ages` sets it per thread. `age: null`
+  // seeds no clock at all — the empty storage of a first use, where growth starts on open.
+  // Height never comes from the number of turns.
   const { rows = turns(12), threads, scope, size = "compact", background, blockStorage = false, clock = true,
     viewport = { width: 1100, height: 760 }, reducedMotion = "no-preference", colorScheme = "light",
     hasTouch = false, isMobile = false, deviceScaleFactor = 1, waitFor = "canvas", lang = "ru" } = options;
@@ -81,7 +93,13 @@ export async function openMeadow(ctx, options = {}) {
     if (path === "/page.css") return route.fulfill({ body: ctx.assets.css, contentType: "text/css" });
     return route.fulfill({ body: pageHtml(lang), contentType: "text/html" });
   });
-  const storage = { ...(size ? { [KEY.size]: size } : {}), ...options.storage };
+  const { age = MATURE_MINUTES, ages = {} } = options;
+  const clocks = {};
+  for (const id of Object.keys(threads ?? { [THREAD]: rows })) {
+    const minutes = id in ages ? ages[id] : age;
+    if (minutes !== null) clocks[clockKey(id)] = clockEntry(minutes);
+  }
+  const storage = { ...clocks, ...(size ? { [KEY.size]: size } : {}), ...options.storage };
   const seed = { threads: threads ?? { [THREAD]: rows }, scope, background, random: options.random };
   await page.addInitScript(seedPage, { seed, storage, blockStorage });
   if (clock) await page.clock.install({ time: new Date(CLOCK_START) });
@@ -126,6 +144,15 @@ export class Meadow {
   async garden() { return JSON.parse((await this.storage(KEY.garden)) ?? "[]"); }
   async box() { return this.canvas.boundingBox(); }
   async height() { return this.canvas.evaluate(el => el.getBoundingClientRect().height); }
+  /**
+   * Grass height as a share of the full height of the current size (Compact, Tall or Overgrown):
+   * the canvas box is the full meadow ·1.04 + 3 px (blades.ts boxHeight), so the share is
+   * comparable across sizes. Zones as in grass().
+   */
+  async share(...zones) {
+    const full = (await this.canvas.evaluate(el => el.clientHeight) - 3) / 1.04;
+    return (await this.grass(...zones)).map(h => h / full);
+  }
   async calls(method) { return this.bb(m => window.bb.calls.filter(c => c.method === m), method); }
   async forget() { await this.bb(() => { window.__seen = {}; }); }
   /** Drawn since the last forget(): colour → last position in canvas CSS px. */

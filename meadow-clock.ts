@@ -2,8 +2,9 @@ import { STUBBLE } from "./draw-blade";
 import { isRegrowPeriod } from "./meadow-prefs";
 
 /**
- * Часы «Зарослей»: высота травы зависит только от реального времени (Date.now),
- * не от ходов и не от того, открыта ли вкладка.
+ * Часы луга треда — одни для всех размеров: высота травы в долях зависит только от
+ * реального времени (Date.now), не от ходов и не от того, открыта ли вкладка.
+ * Размер луга задаёт лишь максимум и расположение (Grass.tsx).
  *
  * Модель: доля полной высоты растёт линейно от STUBBLE до 1 за period —
  *   share(t) = STUBBLE + (1 − STUBBLE) · (t − start) / period.
@@ -46,6 +47,7 @@ function read(threadId: string): Saved | null {
   }
 }
 
+/** Без сохранённых часов луг любого размера начинается короткой травой (STUBBLE) и растёт за period. */
 export function createMeadowClock(threadId: string, minutes: number, onReady: (readyAt: number) => void) {
   let period = minutes * MINUTE;
   let start = Date.now();

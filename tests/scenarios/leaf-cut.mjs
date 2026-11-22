@@ -9,7 +9,8 @@ const CLOVER = [CLOVER_LEAF];
 // Every opaque colour of the bush: leaves, dark leaves, sepals and green berries (stalks are thin strokes).
 const BUSH = [[0x2f, 0x7a, 0x2c], [0x28, 0x64, 0x24], [0x4c, 0x8a, 0x36], GREEN_BERRY];
 const phone = (garden, size = "full") => ({
-  rows: turns(52), viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true,
+  // Overgrown: the leaves stand above the short grass of a clock that starts on open.
+  rows: turns(52), age: size === "overgrown" ? 0 : undefined, viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true,
   storage: { [KEY.size]: size, [KEY.guests]: JSON.stringify({ bee: false, butterfly: false }), [KEY.garden]: JSON.stringify(garden) },
 });
 

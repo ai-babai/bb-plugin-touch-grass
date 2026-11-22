@@ -4,7 +4,7 @@ import { anchorShare, minutesForKey, minutesFromInput, minutesToUnits, REGROW_AN
 import type { MeadowCardState } from "./useMeadowCard";
 
 /**
- * Часы «Зарослей» над перевёрнутой карточкой: нативный range выбирает время
+ * Часы луга над перевёрнутой карточкой: нативный range выбирает время
  * отрастания — любую целую минуту на шкале с опорами 5 / 15 / 40 / 90 (regrow-scale),
  * ниже — отдельно — сколько осталось до зрелости.
  */

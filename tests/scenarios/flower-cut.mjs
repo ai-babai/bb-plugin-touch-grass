@@ -29,7 +29,7 @@ const petals = async m => (await m.seen([DAISY, CORNFLOWER, BUTTERCUP])).map(p =
 export default [
   ["wildflowers form a low, varied border and a mobile scythe can cut one above short grass", ctx =>
     withMeadow(ctx, {
-      ...bed([]), size: "overgrown", viewport: { width: 390, height: 790 },
+      ...bed([]), size: "overgrown", age: 0, viewport: { width: 390, height: 790 }, // short grass of a fresh clock
       isMobile: true, hasTouch: true, reducedMotion: "reduce",
       storage: { [KEY.guests]: '{"bee":false,"butterfly":false}',
         [KEY.garden]: JSON.stringify([0, 1, 2, 3].map((kind, i) => ({ kind, at: 0.2 + i * 0.18 }))) },

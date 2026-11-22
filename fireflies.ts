@@ -46,8 +46,13 @@ export function createFireflies(host: Habitat) {
   flyEl.appendChild(target);
   host.element.appendChild(flyEl);
 
+  /** Последнее размещение: на кадрах гостя место и трава те же — ни расчёта, ни записи стилей. */
+  let placedX = NaN;
+  let placedFull = NaN;
   const placeFirefly = (full: number) => {
-    if (!firefly) return;
+    if (!firefly || (firefly.x === placedX && full === placedFull)) return;
+    placedX = firefly.x;
+    placedFull = full;
     const left = `${firefly.x.toFixed(1)}px`;
     const size = fireflySize(full);
     const bottom = `${(2 + Math.min(full * 0.32, 14 * size)).toFixed(1)}px`;

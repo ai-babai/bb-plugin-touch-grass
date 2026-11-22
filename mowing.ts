@@ -1,7 +1,7 @@
 import type { Blade } from "./blades";
 import { type Flower, FLOWER_KINDS, flowerShape } from "./garden";
 import { scytheHitsFlower } from "./flower-cut";
-import { bladeLength, regrowth, STUBBLE, visibleBladeHeight } from "./draw-blade";
+import { bladeLength, STUBBLE, visibleBladeHeight } from "./draw-blade";
 import { drawMower, tallBoost } from "./meadow-critters";
 
 const SELF_MOW_REACH = 7;
@@ -14,7 +14,7 @@ interface MowingSite {
   readonly width: number;
   readonly height: number;
   readonly bladeHeight: number;
-  /** Порог видимости травинок при прорастании (visibleShare). */
+  /** Порог видимости травинок (Blade.appear); взрослый луг показывает все. */
   readonly visibleUpTo: number;
   readonly blades: Blade[];
   readonly flowers: Flower[];
@@ -27,8 +27,8 @@ interface MowingSite {
   markCut(): void;
   onPass(now: number): void;
   onStroke(x: number, now: number): void;
-  /** «Заросли»: срез травинки до доли keep её полной длины пишется в часы луга. */
-  cutWild(b: Blade, keep: number): void;
+  /** Срез травинки до доли keep её полной длины пишется в часы луга. */
+  recordCut(b: Blade, keep: number): void;
   /** Полный проход косилки (или мгновенный покос) завершён. */
   onMowed(): void;
   /** Срезанные цветы: убрать из общего сада и сохранить его. */
@@ -42,15 +42,10 @@ export function createMowing(site: MowingSite) {
   const clippings: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
 
   /** Срезает травинку до доли keep её полной высоты; ниже лезвия не трогает. */
-  const cutBlade = (b: Blade, now: number, keep = STUBBLE) => {
-    if (regrowth(b, now) <= keep + 0.04) return false; // уже не выше лезвия
-    if (b.wild !== undefined) {
-      b.wild = keep;
-      site.cutWild(b, keep);
-      return true;
-    }
-    b.cutAt = now;
-    b.cutTo = keep;
+  const cutBlade = (b: Blade, keep = STUBBLE) => {
+    if (b.grown <= keep + 0.04) return false; // уже не выше лезвия
+    b.grown = keep;
+    site.recordCut(b, keep);
     return true;
   };
 
@@ -58,12 +53,12 @@ export function createMowing(site: MowingSite) {
    * Какую долю полной длины травинки оставляет коса на высоте y (сверху холста):
    * верхушка опускается до лезвия, но не ниже SCYTHE_MIN_PX. null — лезвие выше травинки.
    */
-  const keepBelow = (b: Blade, y: number, now: number) => {
-    const top = visibleBladeHeight(b, site.bladeHeight, site.visibleUpTo, now);
+  const keepBelow = (b: Blade, y: number) => {
+    const top = visibleBladeHeight(b, site.bladeHeight, site.visibleUpTo);
     const blade = site.height - y;
     if (top <= 0 || blade >= top - 0.5) return null;
-    const grown = regrowth(b, now);
-    const fullLength = bladeLength(b, site.bladeHeight, site.visibleUpTo, now) / grown;
+    const grown = b.grown;
+    const fullLength = bladeLength(b, site.bladeHeight, site.visibleUpTo) / grown;
     return Math.min(grown, Math.max(SCYTHE_MIN_PX / fullLength, (grown * Math.max(0, blade)) / top));
   };
 
@@ -104,7 +99,7 @@ export function createMowing(site: MowingSite) {
     site.onPass(now);
     if (site.reduced) {
       removeFlowers(site.flowers.slice(), now); // косилка убирает и цветы на своём пути
-      for (const b of site.blades) cutBlade(b, now);
+      for (const b of site.blades) cutBlade(b);
       site.onMowed();
       site.markCut();
       site.draw();
@@ -127,9 +122,8 @@ export function createMowing(site: MowingSite) {
     const size = mowerScale(site.height);
     const front = mower.x + mower.dir * 9 * size;
     for (const b of site.blades) {
-      if (b.cutAt >= mower.start) continue;
       if (mower.dir * (b.x - front) > 0) continue;
-      if (cutBlade(b, now)) throwClipping(b, b.x);
+      if (cutBlade(b)) throwClipping(b, b.x); // пройденная травинка уже у лезвия и не режется снова
     }
     const pass = mower;
     removeFlowers(site.flowers.filter(f => pass.dir * (f.at * site.width - front) <= 0), now);
@@ -147,7 +141,7 @@ export function createMowing(site: MowingSite) {
    * может стоять корнем вне прохода, а стеблем в нём — её тоже режем.
    */
   const bladeSpan = (b: Blade, now: number): [number, number] => {
-    const tip = b.x + (b.lean + Math.max(-1.15, Math.min(1.15, b.bend)) * 0.8) * bladeLength(b, site.bladeHeight, site.visibleUpTo, now);
+    const tip = b.x + (b.lean + Math.max(-1.15, Math.min(1.15, b.bend)) * 0.8) * bladeLength(b, site.bladeHeight, site.visibleUpTo);
     return [Math.min(b.x, tip), Math.max(b.x, tip)];
   };
 
@@ -165,8 +159,8 @@ export function createMowing(site: MowingSite) {
     for (const b of site.blades) {
       const [left, right] = bladeSpan(b, now);
       if (right < lo || left > hi) continue;
-      const keep = keepBelow(b, heightAt(Math.max(lo, Math.min(hi, b.x))), now);
-      if (keep !== null && cutBlade(b, now, keep)) {
+      const keep = keepBelow(b, heightAt(Math.max(lo, Math.min(hi, b.x))));
+      if (keep !== null && cutBlade(b, keep)) {
         cut = true;
         throwClipping(b, b.x);
       }
@@ -199,8 +193,7 @@ export function createMowing(site: MowingSite) {
     finishImmediately() {
       clippings.length = 0;
       if (mower) {
-        const now = performance.now();
-        for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now);
+        for (const b of site.blades) cutBlade(b);
         site.cutFlowers([...site.flowers]);
         mower = null;
         site.onMowed();
