@@ -1,6 +1,6 @@
 /**
  * Рисунок цветов 0–3 (ромашка, василёк, клевер, лютик): длина стебля, листья по видам и
- * просвет в траве за цветком. Только геометрия и цвет; где цветок стоит и как гнётся —
+ * жилки белой ромашки. Только геометрия и цвет; где цветок стоит и как гнётся —
  * решает garden.ts (flowerShape), общий для рисунка, касания и покоса.
  */
 
@@ -134,20 +134,19 @@ export function drawLeaves(ctx: CanvasRenderingContext2D, kind: number, s: Stem,
   LEAVES[kind]?.(ctx, s, size);
 }
 
-/** Просвет в траве за цветком: дальние травинки вокруг стебля и головки слегка гаснут. */
-export function clearBehind(ctx: CanvasRenderingContext2D, s: Stem, r: number) {
-  ctx.save();
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.globalAlpha = 0.45;
-  ctx.fillStyle = ctx.strokeStyle = "#000"; // цвет не важен; не оставлять цвет лепестков в контексте
+/**
+ * Белая ромашка на светлой теме: тонкая тёплая жилка внутри каждого лепестка (от сердцевины, не до
+ * кончика) отделяет лепестки друг от друга и от фона без контура и ореола вокруг головки.
+ * Вызывается в системе координат головки, уже повёрнутой как венчик.
+ */
+export function daisyVeins(ctx: CanvasRenderingContext2D, r: number, n: number, long: number) {
   ctx.beginPath();
-  ctx.moveTo(s.x, s.ground);
-  ctx.quadraticCurveTo(s.cx, s.cy, s.headX, s.headY);
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
+  for (let i = 0; i < n; i++) {
+    ctx.rotate((Math.PI * 2) / n);
+    ctx.moveTo(0, -r * 0.5);
+    ctx.lineTo(0, -r * long * 0.85);
+  }
+  ctx.strokeStyle = "rgba(168, 150, 104, 0.45)";
+  ctx.lineWidth = Math.min(0.6, r * 0.12);
   ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(s.headX, s.headY, r * 1.7 + 1.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 }

@@ -1,4 +1,4 @@
-import { clearBehind, drawLeaves, type Stem, stemLength } from "./flower-art";
+import { daisyVeins, drawLeaves, type Stem, stemLength } from "./flower-art";
 import { bushShape, drawStrawberryBush, LEAF, STRAWBERRY } from "./strawberry";
 
 export const BLOOM_MS = 800;
@@ -16,6 +16,7 @@ export const FLOWER_KINDS = [
   { petal: "#f3c531", center: "#c58b12", n: 5, long: 1.0, wide: 0.85 }, // лютик
   { petal: LEAF, center: LEAF, n: 3, long: 1.0, wide: 0.7 }, // земляника: кустик, рисует strawberry.ts; petal — цвет обрезков
 ];
+const DAISY = 0;
 
 export function gardenCapacity(growth: number) {
   return 3 + Math.round(growth * 9);
@@ -114,7 +115,6 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
       continue;
     }
     const curve: Stem = { x, ground, cx: x + bend * stem * 0.1, cy: ground - stem * 0.5, headX, headY, len: stem, bend };
-    clearBehind(ctx, curve, r);
     ctx.beginPath();
     ctx.moveTo(x, ground + 0.5);
     ctx.quadraticCurveTo(curve.cx, curve.cy, headX, headY);
@@ -131,15 +131,13 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], wi
     ctx.rotate(bend * 0.6 + x * 0.37);
     ctx.globalAlpha = dark ? 0.9 : 1;
     ctx.fillStyle = kind.petal;
-    ctx.strokeStyle = "rgba(57, 69, 45, 0.40)";
-    ctx.lineWidth = 0.55;
     for (let i = 0; i < kind.n; i++) {
       ctx.rotate((Math.PI * 2) / kind.n);
       ctx.beginPath();
       ctx.ellipse(0, -r * kind.long * 0.55, r * kind.wide * 0.55, r * kind.long * 0.55, 0, 0, Math.PI * 2);
-      ctx.stroke();
       ctx.fill();
     }
+    if (f.kind === DAISY && !dark) daisyVeins(ctx, r, kind.n, kind.long);
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
     ctx.fillStyle = kind.center;
