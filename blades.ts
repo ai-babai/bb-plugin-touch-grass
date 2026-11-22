@@ -16,6 +16,7 @@ export type Blade = {
   seed: boolean; // колосок
   cutAt: number; // время покоса, 0 — не скошена
   cutTo?: number; // доля высоты сразу после покоса; по умолчанию — стерня
+  wild?: number; // «Заросли»: доля полной высоты по часам луга (meadow-clock); cutAt тогда не используется
   bend: number;
   vel: number;
   fill: string;

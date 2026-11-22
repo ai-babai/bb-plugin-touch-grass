@@ -42,13 +42,28 @@ export function BackIcon() {
   );
 }
 
-export function SizeIcon({ tall }: { tall: boolean }) {
+const SIZE_PATHS = {
+  compact: "M2 11V8.5M5 11V7M8 11V8M11 11V9",
+  full: "M2 11V4M5 11V1.5M8 11V3M11 11V5",
+} as const;
+
+export function SizeIcon({ size }: { size: "compact" | "full" | "overgrown" }) {
+  if (size === "overgrown") return <OvergrownIcon />;
   return (
     <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+      <path d={SIZE_PATHS[size]} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+/** Заросли: густые изогнутые стебли выше рамки значка, а не ровные столбики. */
+function OvergrownIcon() {
+  return (
+    <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
       <path
-        d={tall ? "M2 11V4M5 11V1.5M8 11V3M11 11V5" : "M2 11V8.5M5 11V7M8 11V8M11 11V9"}
+        d="M1.2 11.5C1.6 7.5 .6 4.5.4 1.2M3.6 11.5C3.4 7 4.6 3.4 6.4.4M6.2 11.5C6.4 7.6 5 4.2 3 1.6M8.6 11.5C8.4 7.8 9.6 4.6 11.6 2.6M10.8 11.5C11 8.6 10.4 6.6 9.2 5"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.15"
         strokeLinecap="round"
         fill="none"
       />

@@ -2,9 +2,11 @@ import type { Blade } from "./blades";
 
 export const STUBBLE = 0.16; // доля высоты, что остаётся после покоса газонокосилкой
 export const REGROW_MS = 60_000; // полное отрастание без новых ходов
+const TALL_PX = 66; // длина травинки зрелого высокого луга
 
 /** Доля полной высоты, до которой травинка отросла после покоса. */
 export function regrowth(b: Blade, now: number) {
+  if (b.wild !== undefined) return b.wild;
   if (!b.cutAt) return 1;
   const p = (now - b.cutAt) / REGROW_MS;
   const base = b.cutTo ?? STUBBLE;
@@ -50,7 +52,8 @@ export function renderBlade(ctx: CanvasRenderingContext2D, b: Blade, width: numb
 }
 
 function paintBlade(ctx: CanvasRenderingContext2D, b: Blade, h: number, ground: number, seedsVisible: boolean) {
-  const w = b.w * (0.6 + 0.4 * Math.min(1, h / 24));
+  // Выше обычного зрелого луга (заросли) стебли шире: силуэт густой, а не штриховой.
+  const w = b.w * (0.6 + 0.4 * Math.min(1, h / 24)) * (1 + Math.max(0, h - TALL_PX) / 140);
   const bend = Math.max(-1.15, Math.min(1.15, b.bend));
   const dx = (b.lean + bend * 0.8) * h;
   const tipX = b.x + dx;

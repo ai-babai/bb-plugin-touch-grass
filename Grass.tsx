@@ -9,7 +9,10 @@ import "./grass.css";
 import { createMowing } from "./mowing";
 import { createVisitors, FIRST_VISITOR_MS } from "./meadow-visitors";
 import { createPointerInput } from "./meadow-input";
-import { type Guests, scaleFor } from "./meadow-prefs";
+import { type Guests, type MeadowSize, scaleFor } from "./meadow-prefs";
+import { watchChatSpan } from "./meadow-reach";
+import { createHitArea } from "./meadow-hit";
+import { createMeadowClock, type MeadowClock } from "./meadow-clock";
 import { MeadowCard } from "./MeadowCard";
 import { useMeadowCard } from "./useMeadowCard";
 
@@ -34,6 +37,13 @@ const GROW_MS = 1400;
 const FIRST_FIREFLY_MS = 1800;
 
 const TURN_REGROW_BOOST = 0.35; // каждый новый ход ускоряет отрастание на треть
+const SPROUT_MS = 800; // «Вырастить сейчас»: низкая и скошенная трава плавно поднимается
+const WILD_TICK_MS = 4000; // «Заросли» растут за десятки минут: редкая перерисовка вместо кадров
+
+/** Доля высоты при прорастании: от прежней к часам, но не выше часов — свежий срез и зрелая трава не дёргаются. */
+function sproutShare(target: number, from: number | undefined, eased: number) {
+  return from === undefined ? target : Math.min(target, from + (target - from) * eased);
+}
 
 function unit(value: number | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : undefined;
@@ -41,12 +51,14 @@ function unit(value: number | undefined): number | undefined {
 
 type Engine = {
   setGrowth(g: number): void;
-  setScale(scale: number): void;
+  setSize(size: MeadowSize): void;
   setMetrics(lush: number | undefined, activity: number | undefined): void;
   mow(): void;
   setGuests(guests: Guests): void;
   setFlipped(flipped: boolean): void;
   setScythe(on: boolean): void;
+  setMinutes(minutes: number): void;
+  growNow(): void;
 };
 
 export function Grass({
@@ -71,12 +83,15 @@ export function Grass({
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const targetRef = useRef(target);
-  const scaleRef = useRef(scale);
+  const sizeRef = useRef(ui.size);
+  const minutesRef = useRef(ui.regrowMinutes);
+  minutesRef.current = ui.regrowMinutes;
+  const setReadyAt = ui.setReadyAt;
   const metricsRef = useRef({ lush, activity });
   const engineRef = useRef<Engine | null>(null);
 
   targetRef.current = target;
-  scaleRef.current = scale;
+  sizeRef.current = ui.size;
   metricsRef.current = { lush, activity };
 
   useEffect(() => {
@@ -84,8 +99,8 @@ export function Grass({
   }, [target]);
 
   useEffect(() => {
-    engineRef.current?.setScale(scale);
-  }, [scale]);
+    engineRef.current?.setSize(ui.size);
+  }, [ui.size]);
 
   useEffect(() => {
     engineRef.current?.setMetrics(lush, activity);
@@ -107,6 +122,10 @@ export function Grass({
   }, [scythe]);
 
   useEffect(() => {
+    engineRef.current?.setMinutes(ui.regrowMinutes);
+  }, [ui.regrowMinutes]);
+
+  useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -115,7 +134,11 @@ export function Grass({
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = motionQuery.matches;
     let theme: Theme = detectTheme(host);
-    let scale = scaleRef.current;
+    let size = sizeRef.current;
+    let scale = scaleFor(size);
+    let canopy: ReturnType<typeof watchChatSpan> | undefined;
+    const hitArea = createHitArea(host.querySelector<HTMLElement>(".tg-hit"), () => draw());
+    let wasCut = false;
     let lush = metricsRef.current.lush;
     let activity = metricsRef.current.activity;
     const mh = (g: number) => meadowHeight(g, scale);
@@ -123,6 +146,12 @@ export function Grass({
     let height = 0;
     let dpr = 1;
     let blades: Blade[] = [];
+    // «Заросли»: высоту задают часы луга (реальное время), ходы не влияют, густота — взрослая.
+    let clock: MeadowClock | undefined;
+    // Прорастание после «Вырастить сейчас»: доли высоты травинок до нажатия (performance-время анимации).
+    let sprout: { start: number; from: WeakMap<Blade, number> } | null = null;
+    let turnGrowth = targetRef.current;
+    const growthGoal = () => (clock ? 1 : turnGrowth);
     let shown = reduced ? targetRef.current : 0; // при открытии трава прорастает
     let growFrom = shown;
     let growTo = targetRef.current;
@@ -147,7 +176,12 @@ export function Grass({
           window.clearInterval(regrowTimer);
           regrowTimer = 0;
         }
-      }, reduced ? 2000 : 250);
+      }, clock ? WILD_TICK_MS : reduced ? 2000 : 250);
+    };
+    const restartRegrow = () => {
+      window.clearInterval(regrowTimer);
+      regrowTimer = 0;
+      ensureRegrow();
     };
 
     const mowing = createMowing({
@@ -156,9 +190,11 @@ export function Grass({
       get blades() { return blades; },
       get flowers() { return flowers; }, get reduced() { return reduced; },
       draw: () => draw(), animate: () => schedule(), regrow: ensureRegrow,
-      markCut: () => { anyCut = true; },
+      markCut: () => { anyCut = true; hitArea.invalidate(); },
       onPass: now => visitors.leave(now, true),
       onStroke: (x, now) => { if (visitors.near(x, 40)) visitors.scare(x, height / 2, now); },
+      cutWild: (b, keep) => clock?.cut(b.x, keep * b.h, Date.now()),
+      onMowed: () => { sprout = null; clock?.restart(Date.now()); },
     });
     const visitors = createVisitors({
       bounds: () => ({ width, height, meadow: mh(shown) }),
@@ -202,21 +238,41 @@ export function Grass({
       const rect = host.getBoundingClientRect();
       const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(0, Math.round(rect.width));
+      scale = canopy ? canopy.reach(rect.bottom) / meadowHeight(1, 1) : scaleFor(size);
       const h = boxHeight(growTo, scale);
-      if (w === width && h === height && nextDpr === dpr && blades.length) return;
       const widthChanged = w !== width || !blades.length;
+      if (!widthChanged && h === height && nextDpr === dpr) return;
       width = w;
       height = h;
       dpr = nextDpr;
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       canvas.style.height = `${height}px`;
-      if (widthChanged) blades = buildBlades(threadId, width, theme, lush);
+      hitArea.invalidate();
       if (widthChanged) {
+        blades = buildBlades(threadId, width, theme, lush);
         fireflies.resize(width);
         if (width >= 60) fireflies.queue(FIRST_FIREFLY_MS);
       }
       draw();
+    };
+
+    /** «Заросли»: высоты травинок по часам луга. true — ещё растут (редкий тик, профиль попаданий). */
+    const applyClock = () => {
+      if (!clock) return false;
+      const wall = Date.now();
+      const t = sprout ? Math.min(1, (performance.now() - sprout.start) / SPROUT_MS) : 1;
+      const eased = 1 - (1 - t) ** 3;
+      for (const b of blades) b.wild = sproutShare(clock.share(b.x, b.h, wall), sprout?.from.get(b), eased);
+      if (t >= 1) sprout = null;
+      return sprout !== null || wall < clock.readyAt();
+    };
+
+    /** Слой попаданий «Зарослей» следует за профилем травы. */
+    const updateHitArea = (full: number, visibleUpTo: number, now: number) => {
+      if (wasCut && !anyCut) hitArea.invalidate(); // трава отросла полностью
+      wasCut = anyCut;
+      hitArea.update({ blades, width, height, full, visibleUpTo, now }, anyCut || shown !== growTo, !!canopy);
     };
 
     const draw = () => {
@@ -228,11 +284,14 @@ export function Grass({
       const ground = height;
       const seedsVisible = shown > 0.55;
       const now = performance.now();
+      const wildGrowing = applyClock();
       anyCut = false;
       for (const b of blades) {
         if (renderBlade(ctx, b, width, ground, full, visibleUpTo, seedsVisible, now)) anyCut = true;
       }
+      anyCut ||= wildGrowing;
       drawFlowers(ctx, flowers, width, full, ground, shown, theme === "dark");
+      updateHitArea(full, visibleUpTo, now);
       fireflies.place(full);
       const dark = theme === "dark";
       mowing.paint(ctx, now, dark);
@@ -277,7 +336,7 @@ export function Grass({
 
       draw();
       ensureRegrow();
-      if (active) schedule();
+      if (active || sprout) schedule();
       else lastTick = 0; // покой: ни одного кадра, пока ничего не меняется
     };
 
@@ -348,6 +407,7 @@ export function Grass({
       if (reduced) {
         for (const b of blades) { b.bend = 0; b.vel = 0; }
         for (const f of flowers) { f.bend = 0; f.vel = 0; f.born = 0; }
+        sprout = null;
         mowing.finishImmediately();
         visitors.reducedChanged();
         press = null;
@@ -369,12 +429,39 @@ export function Grass({
       }
     };
 
+    const configureCanopy = () => {
+      canopy?.dispose();
+      canopy = size === "overgrown" ? watchChatSpan(host, resize) : undefined;
+    };
+
+    /** Часы «Зарослей» живут, пока выбран этот размер; запись в localStorage переживает смену режима. */
+    const configureClock = () => {
+      sprout = null;
+      clock?.flush();
+      clock = size === "overgrown" ? createMeadowClock(threadId, minutesRef.current, setReadyAt) : undefined;
+      if (!clock) setReadyAt(0);
+      for (const b of blades) {
+        b.wild = undefined;
+        if (clock) b.cutAt = 0; // минутные прокосы других режимов в заросли не переносятся
+      }
+      retarget(growthGoal());
+      restartRegrow();
+      schedule();
+    };
+
+    const retarget = (g: number) => {
+      if (g === growTo) return;
+      growFrom = shown;
+      growTo = g;
+      growStart = performance.now();
+    };
+    const flushClock = () => clock?.flush();
+
     engineRef.current = {
       setGrowth(g: number) {
-        if (g === growTo) return;
-        growFrom = shown;
-        growTo = g;
-        growStart = performance.now();
+        turnGrowth = g;
+        if (clock || g === growTo) return; // в зарослях ходы не меняют ни высоту, ни часы
+        retarget(g);
         if (g > growFrom) {
           // Новый ход подгоняет скошенную траву.
           for (const b of blades) if (b.cutAt) b.cutAt -= REGROW_MS * TURN_REGROW_BOOST;
@@ -383,9 +470,12 @@ export function Grass({
         schedule();
         fireflies.queue(1200); // в подросшем луге появилось место для цветка
       },
-      setScale(next: number) {
-        if (next === scale) return;
-        scale = next;
+      setSize(next: MeadowSize) {
+        if (next === size) return;
+        size = next;
+        configureCanopy();
+        configureClock();
+        hitArea.invalidate();
         resize();
         draw();
       },
@@ -418,10 +508,27 @@ export function Grass({
         scythe = on;
         input.reset(); // режим сменился посреди жеста: начинаем заново
       },
+      growNow() {
+        if (!clock) return;
+        // Без reduced motion низкие участки дорастают за SPROUT_MS; часы сохраняют зрелость сразу.
+        sprout = reduced ? null : { start: performance.now(), from: new WeakMap(blades.map(b => [b, b.wild ?? 1])) };
+        clock.growNow(Date.now());
+        hitArea.invalidate();
+        draw();
+        schedule();
+      },
+      setMinutes(minutes: number) {
+        clock?.setMinutes(minutes);
+        draw();
+        ensureRegrow();
+      },
     };
 
     const resizeObserver = new ResizeObserver(() => resize());
     resizeObserver.observe(host);
+    configureCanopy();
+    configureClock();
+    window.addEventListener("pagehide", flushClock);
     const themeObserver = new MutationObserver(refreshTheme);
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
     if (document.body) themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
@@ -442,6 +549,10 @@ export function Grass({
       frame = 0;
       engineRef.current = null;
       resizeObserver.disconnect();
+      hitArea.dispose();
+      canopy?.dispose();
+      flushClock();
+      window.removeEventListener("pagehide", flushClock);
       themeObserver.disconnect();
       schemeQuery.removeEventListener("change", refreshTheme);
       motionQuery.removeEventListener("change", onMotionChange);
@@ -458,6 +569,7 @@ export function Grass({
   }, [threadId]);
 
   return (
-    <MeadowCard ui={ui} hostRef={hostRef} canvasRef={canvasRef} box={boxHeight(target, scale)} onMow={() => engineRef.current?.mow()} />
+    <MeadowCard ui={ui} hostRef={hostRef} canvasRef={canvasRef} box={boxHeight(target, scale)} onMow={() => engineRef.current?.mow()}
+      onGrowNow={() => engineRef.current?.growNow()} />
   );
 }

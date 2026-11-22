@@ -1,3 +1,4 @@
+import { MeadowTimer } from "./MeadowTimer";
 import { copy } from "./meadow-copy";
 import { type CSSProperties, type ReactNode, type RefObject, useId } from "react";
 import { BackIcon, MowerIcon, ScytheIcon, SettingsIcon, SizeIcon } from "./meadow-icons";
@@ -13,6 +14,7 @@ import type { MeadowCardState } from "./useMeadowCard";
 const SIZE_OPTIONS: { value: MeadowSize; label: string }[] = [
   { value: "compact", label: copy.compact },
   { value: "full", label: copy.full },
+  { value: "overgrown", label: copy.overgrown },
 ];
 
 const GUEST_OPTIONS: { value: keyof Guests; label: string; icon: string }[] = [
@@ -27,14 +29,24 @@ type Props = {
   /** Высота полосы травы, px. */
   box: number;
   onMow(): void;
+  /** «Заросли»: сразу дорастить луг до зрелости. */
+  onGrowNow(): void;
 };
 
 function shellClass(ui: MeadowCardState) {
-  return ["tg-meadow", ui.flipped && "is-flipped", ui.scythe && "is-scything"].filter(Boolean).join(" ");
+  return ["tg-meadow", ui.flipped && "is-flipped", ui.scythe && "is-scything", ui.size === "overgrown" && "is-overgrown"]
+    .filter(Boolean)
+    .join(" ");
 }
 
-export function MeadowCard({ ui, hostRef, canvasRef, box, onMow }: Props) {
+export function MeadowCard({ ui, hostRef, canvasRef, box, onMow, onGrowNow }: Props) {
   const backId = useId();
+  // Вырастить и сразу показать луг: карточка переворачивается обратно.
+  const growNow = () => {
+    onGrowNow();
+    ui.toggleSettings();
+    ui.toggleRef.current?.focus({ preventScroll: true }); // кнопка действия исчезает вместе с панелью
+  };
   return (
     <div
       ref={hostRef}
@@ -50,6 +62,7 @@ export function MeadowCard({ ui, hostRef, canvasRef, box, onMow }: Props) {
         <MeadowFront ui={ui} canvasRef={canvasRef} onMow={onMow} />
         <MeadowSettings ui={ui} id={backId} />
       </div>
+      {ui.flipped && ui.size === "overgrown" && <MeadowTimer ui={ui} onGrowNow={growNow} />}
       <SettingsToggle ui={ui} controls={backId} />
     </div>
   );
@@ -67,6 +80,8 @@ function MeadowFront({ ui, canvasRef, onMow }: Pick<Props, "ui" | "canvasRef" | 
       title={ui.scythe ? undefined : copy.brush}
     >
       <canvas ref={canvasRef} className="tg-canvas" aria-hidden="true" />
+      {/* Заросли: ловит указатель только над стоящей травой (clip-path по профилю). */}
+      <div className="tg-hit" aria-hidden="true" />
       <button
         ref={ui.scytheRef}
         type="button"
@@ -128,7 +143,7 @@ function MeadowSettings({ ui, id }: { ui: MeadowCardState; id: string }) {
             label={`${copy.size}: ${option.label.toLowerCase()}`}
             title={option.label}
             onClick={() => ui.chooseSize(option.value)}
-            icon={<SizeIcon tall={option.value === "full"} />}
+            icon={<SizeIcon size={option.value} />}
             text={option.label}
           />
         ))}

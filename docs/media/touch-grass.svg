@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+  <title>Touch Grass</title>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22423f"/>
+      <stop offset="1" stop-color="#2f5a3f"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#fff4c2" stop-opacity="1"/>
+      <stop offset="0.28" stop-color="#ffd257" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#f2b536" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f2b536" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="tile"><rect width="64" height="64" rx="14"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#sky)"/>
+  <ellipse cx="32" cy="66" rx="44" ry="14" fill="#264d31" clip-path="url(#tile)"/>
+  <path d="M30 54 C26 44 19 36 11 32 C20 38 25 46 26 54Z" fill="#5f9446"/>
+  <path d="M35 54 C38 42 45 34 54 30 C46 37 41 45 39 54Z" fill="#5f9446"/>
+  <path d="M27 54 C26 42 23 31 17 21 C26 30 31 42 32 54Z" fill="#7fb257"/>
+  <path d="M33 54 C35 40 40 28 47 20 C42 30 38 42 37 54Z" fill="#7fb257"/>
+  <path d="M29 54 C30 39 31 25 32 12 C34 25 35 39 35 54Z" fill="#a9d06e"/>
+  <circle cx="46" cy="14" r="11" fill="url(#glow)"/>
+  <circle cx="46" cy="14" r="2.6" fill="#fff7d6"/>
+</svg>

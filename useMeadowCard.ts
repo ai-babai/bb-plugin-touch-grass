@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { type Guests, loadGuests, loadSize, type MeadowSize, saveGuests, saveSize } from "./meadow-prefs";
+import { type Guests, loadGuests, loadSize, loadRegrowMinutes, saveRegrowMinutes, type MeadowSize, saveGuests, saveSize } from "./meadow-prefs";
 
 /**
  * Состояние карточки луга: сторона (трава/настройки), режим косы и предпочтения.
@@ -9,6 +9,12 @@ import { type Guests, loadGuests, loadSize, type MeadowSize, saveGuests, saveSiz
 export function useMeadowCard() {
   const [size, setSize] = useState<MeadowSize>(loadSize);
   const [guests, setGuests] = useState<Guests>(loadGuests);
+  const [regrowMinutes, setRegrowMinutes] = useState(loadRegrowMinutes);
+  const [readyAt, setReadyAt] = useState(0);
+  const choosePeriod = (minutes: number) => {
+    setRegrowMinutes(minutes);
+    saveRegrowMinutes(minutes);
+  };
   const [flipped, setFlipped] = useState(false);
   const [scythe, setScythe] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -59,6 +65,7 @@ export function useMeadowCard() {
 
   return {
     size, chooseSize, guests, toggleGuest,
+    regrowMinutes, choosePeriod, readyAt, setReadyAt,
     flipped, toggleSettings, toggleRef,
     scythe, toggleScythe, scytheRef,
     onKeyDown,

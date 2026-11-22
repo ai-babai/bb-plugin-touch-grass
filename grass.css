@@ -31,7 +31,7 @@
     rgba(250, 170, 20, 0.3) 48%,
     rgba(255, 190, 40, 0) 70%);
   opacity: calc(0.6 + 0.4 * var(--e));
-  transform: scale(calc(0.65 + 0.95 * var(--e)));
+  transform: scale(calc((0.65 + 0.95 * var(--e)) * var(--tg-fly, 1)));
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 /* Тельце светлячка: видно и на светлой теме. */
@@ -136,6 +136,24 @@
   cursor: crosshair;
   touch-action: none;
 }
+
+/* Заросли: полоса у композера компактная, холст поднимается над лентой чата.
+   Холст указатель не ловит. Ловит прозрачный слой .tg-hit, обрезанный по профилю
+   стоящей травы: над травой — гладить, пригибать и косить (жест не обрывается),
+   в прокосе и вне травы — родные ссылки, выделение и прокрутка чата. */
+.tg-hit { display: none; }
+.tg-meadow.is-overgrown { z-index: 1; }
+.tg-meadow.is-overgrown .tg-canvas { pointer-events: none; }
+.tg-meadow.is-overgrown .tg-hit {
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  clip-path: polygon(0 0, 0 0, 0 0);
+  touch-action: none;
+}
+.tg-meadow.is-overgrown.is-scything .tg-hit { cursor: crosshair; }
 
 /* Кнопки: прозрачная цель нажатия, внутри — небольшая подложка с иконкой.
    Коса слева, газонокосилка и настройки справа; цели не перекрываются. */
@@ -264,9 +282,10 @@
 }
 .tg-guest[aria-pressed="false"] .tg-chip-label { text-decoration: line-through; opacity: 0.7; }
 
-@container (max-width: 380px) {
+/* Пять чипов с подписями не влезают — остаются значки (на телефоне всегда). */
+@container (max-width: 540px) {
   .tg-caption, .tg-chip-label { display: none; }
-  .tg-back { gap: 6px; }
+  .tg-set + .tg-set { margin-left: -4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -275,4 +294,188 @@
   .tg-card, .tg-meadow.is-flipped .tg-card { transform: none; transition: none; }
   .tg-back { transform: none; transition: none; }
   .tg-front { transition: none; }
+}
+
+/* Часы «Зарослей» открываются над перевёрнутой карточкой: Back остаётся в своей точке,
+   композер свободен. Сверху — время отрастания и отдельно — сколько до зрелости,
+   ниже — ползунок 20 / 40 / 60 мин со шкалой. */
+.tg-timer {
+  --tg-accent: #4f8a3f;
+  --tg-ink: var(--foreground, #2c3328);
+  --tg-soft: color-mix(in srgb, var(--tg-ink) 74%, transparent);
+  --tg-line: color-mix(in srgb, var(--tg-ink) 14%, transparent);
+  position: absolute;
+  inset: auto 0 calc(100% + 4px);
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 10px 14px 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--tg-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tg-accent) 7%, var(--background, #fff));
+  box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.35);
+  color: var(--tg-ink);
+  font: 500 13px/1.25 system-ui, -apple-system, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Нижняя строка: сколько до зрелости и «Вырастить сейчас». */
+.tg-timer-foot {
+  display: flex;
+  flex-wrap: wrap; /* узкий телефон: кнопка уходит на свою строку во всю ширину */
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  min-height: 44px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--tg-line);
+}
+.tg-grow-now {
+  flex: 1 0 auto;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #437536;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.tg-grow-now:hover { background: #39672e; }
+.tg-grow-now:focus-visible { outline: 2px solid var(--ring, var(--tg-accent)); outline-offset: 2px; }
+@media (pointer: fine) {
+  .tg-grow-now { flex: 0 0 auto; min-height: 32px; }
+  .tg-timer-foot { min-height: 34px; }
+}
+.tg-timer-label {
+  display: inline-flex;
+  white-space: nowrap;
+  min-height: 28px;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--tg-soft);
+}
+.tg-timer-value {
+  color: var(--tg-ink);
+  font-weight: 650;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+/* Статус — отдельная плашка: не путается с выбранной длительностью. */
+.tg-timer-status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tg-ink) 6%, transparent);
+  color: var(--tg-soft);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.tg-timer-clock {
+  color: var(--tg-ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.tg-timer-status.is-grown {
+  color: var(--tg-accent);
+  background: color-mix(in srgb, var(--tg-accent) 14%, transparent);
+  font-weight: 600;
+}
+
+/* Ползунок: цель 44 px в высоту, дорожка тонкая, ручка крупная. */
+.tg-timer-track { position: relative; padding: 0 2px; }
+.tg-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none; /* палец тянет ручку, а не листает чат */
+  -webkit-tap-highlight-color: transparent;
+}
+.tg-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--tg-accent) var(--tg-fill, 50%), var(--tg-line) var(--tg-fill, 50%));
+}
+.tg-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--tg-line); }
+.tg-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--tg-accent); }
+.tg-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border: 3px solid var(--background, #fff);
+  border-radius: 50%;
+  background: var(--tg-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3), 0 0 0 1px color-mix(in srgb, var(--tg-accent) 60%, transparent);
+  transition: transform 0.15s ease;
+}
+.tg-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--background, #fff);
+  border-radius: 50%;
+  background: var(--tg-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+}
+.tg-range:active::-webkit-slider-thumb { transform: scale(1.12); }
+.tg-range:focus { outline: none; }
+.tg-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring, var(--tg-accent)) 45%, transparent);
+}
+.tg-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring, var(--tg-accent)) 45%, transparent);
+}
+/* Шкала под дорожкой: метки ровно под положениями ручки (по 13 px от краёв — половина ручки). */
+.tg-timer-scale {
+  position: relative;
+  height: 16px;
+  margin: -8px 15px 0;
+  color: var(--tg-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.tg-timer-scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+.tg-timer-scale span:nth-child(1) { left: 0; }
+.tg-timer-scale span:nth-child(2) { left: 50%; }
+.tg-timer-scale span:nth-child(3) { left: 100%; }
+.tg-timer-scale span.is-current { color: var(--tg-ink); font-weight: 650; }
+
+@media (prefers-color-scheme: dark) {
+  .tg-timer { --tg-accent: #79b765; --tg-ink: var(--foreground, #e4eadf); background: color-mix(in srgb, #79b765 8%, var(--background, #161a15)); }
+}
+:root.dark .tg-timer, [data-theme="dark"] .tg-timer { --tg-accent: #79b765; }
+:root.light .tg-timer, [data-theme="light"] .tg-timer { --tg-accent: #4f8a3f; }
+@media (max-width: 360px) {
+  .tg-timer { padding: 8px 10px 4px; }
+  .tg-timer-label { gap: 5px; font-size: 12px; }
+  .tg-timer-value { font-size: 14px; }
+  .tg-timer-status { padding: 3px 8px; gap: 4px; }
+  .tg-grow-now { padding: 0 12px; gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tg-range::-webkit-slider-thumb { transition: none; }
 }

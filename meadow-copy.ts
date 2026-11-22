@@ -1,5 +1,6 @@
 const english = {
-  meadow: "This chat’s meadow", compact: "Compact", full: "Tall",
+  regrowth: "Regrowth", mins: "min", timeLeft: "Full in", growNow: "Grow now", grown: "Fully grown",
+  meadow: "This chat’s meadow", compact: "Compact", full: "Tall", overgrown: "Overgrown",
   size: "Size", sizeGroup: "Meadow height", guests: "Visitors", guestGroup: "Meadow visitors",
   bee: "Bee", butterfly: "Butterfly", visiting: "enabled", away: "disabled",
   settings: "Meadow settings", back: "Back to meadow",
@@ -9,7 +10,8 @@ const english = {
 };
 
 const russian: typeof english = {
-  meadow: "Луг этого чата", compact: "Компактный", full: "Высокий",
+  regrowth: "Отрастание", mins: "мин", timeLeft: "До зрелости", growNow: "Вырастить сейчас", grown: "Луг вырос",
+  meadow: "Луг этого чата", compact: "Компактный", full: "Высокий", overgrown: "Заросли",
   size: "Размер", sizeGroup: "Размер луга", guests: "Гости", guestGroup: "Гости луга",
   bee: "Пчела", butterfly: "Бабочка", visiting: "прилетает", away: "не прилетает",
   settings: "Настройки луга", back: "Вернуться к лугу",

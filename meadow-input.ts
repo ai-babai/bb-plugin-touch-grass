@@ -5,12 +5,15 @@
  * сразу раздвигает её в стороны, при свайпе укладывает по направлению, после
  * отпускания трава мягко встаёт. Вертикальный свайп прокручивает чат (pan-y),
  * pointercancel отпускает траву.
+ * В «Зарослях» нажатие на стоящую траву (слой .tg-hit) мышью или пальцем
+ * пригибает её и захватывает указатель, чтобы жест не обрывался на стеблях.
  * С косой нажатие захватывает указатель и срезает траву вдоль движения;
  * светлячок от покоса не заряжается. Кнопки и оборот карточки траву не трогают.
  */
 
 const STROKE_GAP_MS = 120; // дольше пауза — новый жест, а не продолжение
 const CONTROLS = ".tg-control, .tg-back";
+const GRASS_HIT = ".tg-hit";
 
 export interface PointerSite {
   readonly host: HTMLElement;
@@ -111,20 +114,36 @@ export function createPointerInput(site: PointerSite) {
     if (dx !== null && Math.abs(dx) >= 0.5) site.stroke(x, y, dx);
   };
 
+  const capture = (event: PointerEvent) => {
+    try {
+      site.host.setPointerCapture(event.pointerId);
+    } catch {
+      // Указатель уже отпущен: жест из одной точки.
+    }
+  };
+
+  const onGrass = (event: Event) => event.target instanceof Element && !!event.target.closest(GRASS_HIT);
+
+  const startHold = (event: PointerEvent) => {
+    const grass = onGrass(event);
+    if (event.pointerType !== "touch" && !grass) return; // мышь в полосе гладит без нажатия
+    if (grass) {
+      event.preventDefault(); // трава, а не выделение текста за ней
+      capture(event);
+    }
+    startPress(event);
+  };
+
   const onDown = (event: PointerEvent) => {
     if (event.button !== 0 || onControl(event)) return;
     if (!site.scythe) {
-      if (event.pointerType === "touch") startPress(event);
+      startHold(event);
       return;
     }
     event.preventDefault(); // без выделения и эмуляции мыши
     stopCutting();
     cutting = event.pointerId;
-    try {
-      site.host.setPointerCapture(event.pointerId);
-    } catch {
-      // Указатель уже отпущен: срежем только точку касания.
-    }
+    capture(event);
     const { x, y } = local(event);
     site.cut(x, y, performance.now());
   };
@@ -146,7 +165,9 @@ export function createPointerInput(site: PointerSite) {
 
   const onEnd = (event: PointerEvent) => {
     if (cutting === event.pointerId) stopCutting();
-    if (finger?.id === event.pointerId) lift();
+    if (finger?.id !== event.pointerId) return;
+    lift();
+    if (site.host.hasPointerCapture?.(event.pointerId)) site.host.releasePointerCapture(event.pointerId);
   };
 
   const onCancel = (event: PointerEvent) => {
@@ -155,7 +176,7 @@ export function createPointerInput(site: PointerSite) {
   };
 
   const onLeave = () => {
-    if (cutting !== null) return; // захваченный указатель ещё косит
+    if (cutting !== null || finger !== null) return; // захваченный указатель ещё на траве
     forget();
     if (site.reduced) site.straighten();
   };

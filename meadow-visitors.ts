@@ -7,7 +7,7 @@
  * а у цели гость сам замедляется. Порхание — только смещение при отрисовке,
  * в траекторию оно не попадает.
  */
-import { BUTTERFLY_PALETTES, drawBee, drawButterfly, type VisitorKind } from "./meadow-critters";
+import { BUTTERFLY_PALETTES, drawBee, drawButterfly, tallBoost, type VisitorKind } from "./meadow-critters";
 
 export type GuestChoice = { bee: boolean; butterfly: boolean };
 export type Point = { x: number; y: number };
@@ -66,9 +66,11 @@ const SCARE_DECAY_MS = 700;
 const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/** Полоса полёта; в высоких «Зарослях» отступы растут с гостем, чтобы крылья не срезались краем. */
 function flightBand(height: number, meadow: number) {
-  const top = Math.min(8, height * 0.3);
-  return { top, bottom: Math.max(top + 2, height - Math.max(4, meadow * 0.45)) };
+  const k = tallBoost(height);
+  const top = Math.min(8, height * 0.3) * k;
+  return { top, bottom: Math.max(top + 2, height - Math.max(4, meadow * 0.45)), side: 12 * k };
 }
 
 /** Темп пчелы: 0.5..1.5 от активности инструментов. */
@@ -109,16 +111,16 @@ function steer(v: Flight, gait: Gait, dt: number) {
 }
 
 /** Следующая точка впереди по курсу: отклонение до ±65°, отскок от краёв. */
-function aheadTarget(v: Flight, width: number, band: { top: number; bottom: number }) {
+function aheadTarget(v: Flight, width: number, band: ReturnType<typeof flightBand>) {
   const heading = Math.hypot(v.vx, v.vy) > 1 ? Math.atan2(v.vy, v.vx) : v.face > 0 ? 0 : Math.PI;
   let angle = heading + rand(-1.13, 1.13);
   const reach = rand(50, 110);
   let x = v.x + Math.cos(angle) * reach;
-  if (x < 12 || x > width - 12) {
+  if (x < band.side || x > width - band.side) {
     angle = Math.PI - angle; // повернуть обратно — дугой, т.к. ускорение ограничено
     x = v.x + Math.cos(angle) * reach;
   }
-  v.tx = clamp(x, 12, width - 12);
+  v.tx = clamp(x, band.side, width - band.side);
   v.ty = clamp(v.y + Math.sin(angle) * reach * 0.35, band.top, band.bottom);
 }
 
@@ -139,6 +141,10 @@ export function createVisitors(host: VisitorHost) {
   let v: Flight | null = null;
   let timer = 0;
   let disposed = false;
+  /** Во взрослых «Зарослях» гость крупнее: вместе с ним растут отступы и радиус испуга. */
+  const boost = () => tallBoost(host.bounds().height);
+  /** Пчела сидит на головке цветка, а не тонет в ней. */
+  const perchY = (head: Point) => head.y - 2 * boost();
 
   const clearTimer = () => {
     if (timer) window.clearTimeout(timer);
@@ -177,11 +183,12 @@ export function createVisitors(host: VisitorHost) {
     const { width, height, meadow } = host.bounds();
     const band = flightBand(height, meadow);
     const fromLeft = Math.random() < 0.5;
+    const off = 10 * tallBoost(height);
     const face = fromLeft ? 1 : -1;
     return {
       kind,
       palette: Math.floor(Math.random() * BUTTERFLY_PALETTES.length),
-      x: fromLeft ? -10 : width + 10,
+      x: fromLeft ? -off : width + off, // влетает из-за края целиком
       y: rand(band.top, band.bottom),
       vx: face * 20, // влетает уже в движении, без рывка с места
       vy: 0,
@@ -208,7 +215,7 @@ export function createVisitors(host: VisitorHost) {
     f.mode = "sit";
     f.vx = f.vy = 0;
     f.x = head ? head.x : rand(20, Math.max(21, width - 20));
-    f.y = head ? head.y - 2 : height - Math.max(5, meadow * 0.8);
+    f.y = head ? perchY(head) : height - Math.max(5, meadow * 0.8);
     f.flap = Math.PI / 2.5;
     clearTimer();
     timer = window.setTimeout(() => {
@@ -221,21 +228,22 @@ export function createVisitors(host: VisitorHost) {
 
   const planNext = (f: Flight) => {
     const { width, height, meadow } = host.bounds();
+    const band = flightBand(height, meadow);
     if (f.kind === "bee") {
       f.flower = pickFlower(f.flower);
       f.mode = f.flower >= 0 ? "land" : "fly";
-      if (f.flower < 0) aheadTarget(f, width, flightBand(height, meadow));
+      if (f.flower < 0) aheadTarget(f, width, band);
       return;
     }
     if (Math.random() < 0.3) {
       // Бабочка присматривает травинку впереди и садится на неё.
       f.mode = "land";
-      f.tx = clamp(f.x + f.face * rand(40, 90), 12, width - 12);
+      f.tx = clamp(f.x + f.face * rand(40, 90), band.side, width - band.side);
       f.ty = height - Math.max(5, meadow * 0.75);
       return;
     }
     f.mode = "fly";
-    aheadTarget(f, width, flightBand(height, meadow));
+    aheadTarget(f, width, band);
   };
 
   function arrive() {
@@ -262,7 +270,8 @@ export function createVisitors(host: VisitorHost) {
     const { width } = host.bounds();
     v.mode = "leave";
     v.flower = -1;
-    v.tx = v.x < width / 2 ? -EDGE - 6 : width + EDGE + 6;
+    const edge = EDGE * boost();
+    v.tx = v.x < width / 2 ? -edge - 6 : width + edge + 6;
     v.ty = Math.max(2, v.y - 6);
     if (hurry) v.scaredAt = now;
     host.animate();
@@ -270,7 +279,7 @@ export function createVisitors(host: VisitorHost) {
 
   const scare = (px: number, py: number, now: number) => {
     if (!v || host.reduced() || v.mode === "leave") return;
-    if (Math.hypot(v.x - px, v.y - py) > SCARE_RADIUS) return;
+    if (Math.hypot(v.x - px, v.y - py) > SCARE_RADIUS * boost()) return;
     const { width, height, meadow } = host.bounds();
     const band = flightBand(height, meadow);
     const wasSitting = v.mode === "sit";
@@ -283,7 +292,7 @@ export function createVisitors(host: VisitorHost) {
       v.mode = "fly";
       v.flower = -1;
       const away = v.x < px ? -1 : 1;
-      v.tx = clamp(px + away * rand(70, 120), 12, width - 12);
+      v.tx = clamp(px + away * rand(70, 120), band.side, width - band.side);
       v.ty = band.top + (band.bottom - band.top) * 0.3;
     }
     if (wasSitting) kickToward(v, 12); // взлёт сразу по новому курсу, без разворота на месте
@@ -319,7 +328,7 @@ export function createVisitors(host: VisitorHost) {
     const head = f.kind === "bee" ? host.flowerHeads()[f.flower] : undefined;
     const ease = Math.min(1, dt * 14);
     const tx = head ? head.x : f.tx;
-    const ty = head ? head.y - 2 : f.ty;
+    const ty = head ? perchY(head) : f.ty;
     f.x += (tx - f.x) * ease; // мягко усаживается и качается вместе с цветком
     f.y += (ty - f.y) * ease;
     if (now <= f.until) return;
@@ -334,7 +343,7 @@ export function createVisitors(host: VisitorHost) {
       return;
     }
     f.tx = head.x;
-    f.ty = head.y - 2;
+    f.ty = perchY(head);
   }
 
   const stepAir = (f: Flight, now: number, dt: number) => {
@@ -342,7 +351,7 @@ export function createVisitors(host: VisitorHost) {
     const dist = steer(f, gaitOf(f, host.activity(), now), dt);
     const { width } = host.bounds();
     if (f.mode === "leave") {
-      if (f.x < -EDGE || f.x > width + EDGE) gone(15_000 + rand(0, 20_000) / beeTempo(host.activity()));
+      if (Math.abs(f.x - width / 2) > width / 2 + EDGE * boost()) gone(15_000 + rand(0, 20_000) / beeTempo(host.activity()));
       return;
     }
     if (f.mode === "land") {
@@ -374,7 +383,8 @@ export function createVisitors(host: VisitorHost) {
   const draw = (ctx: CanvasRenderingContext2D, now: number, dark: boolean) => {
     const f = v;
     if (!f) return;
-    const scale = clamp(host.bounds().height / 36, 0.75, 1.2);
+    const { height } = host.bounds();
+    const scale = clamp(height / 36, 0.75, 1.2) * tallBoost(height);
     const y = f.y + flutterOffset(f, now);
     if (f.kind === "bee") drawBee(ctx, f.x, y, now, f.face, f.mode === "sit", scale, dark);
     else drawButterfly(ctx, f.x, y, f.flap, f.palette, scale, dark);
@@ -387,7 +397,7 @@ export function createVisitors(host: VisitorHost) {
     scare,
     leave,
     /** Гость рядом с точкой по горизонтали. */
-    near: (x: number, radius: number) => !!v && Math.abs(v.x - x) < radius,
+    near: (x: number, radius: number) => !!v && Math.abs(v.x - x) < radius * boost(),
     present: () => v !== null,
     /** Изменился выбор гостей: убрать выключенного, позвать разрешённого. */
     guestsChanged() {

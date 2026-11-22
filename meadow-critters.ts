@@ -5,6 +5,17 @@
 
 export type VisitorKind = "bee" | "butterfly";
 
+/** Высота полосы зрелого высокого луга; до неё фигурки прежнего размера. */
+const TALL_BOX_PX = 72;
+
+/**
+ * Во взрослых «Зарослях» стебли выше обычного луга — косилка и насекомые растут вместе с ними:
+ * 1 при высоте полосы ≤72px, дальше как √(h/72), не больше cap (≈×2 на полосе около 290px).
+ */
+export function tallBoost(height: number, cap = 2.4) {
+  return Math.max(1, Math.min(cap, Math.sqrt(height / TALL_BOX_PX)));
+}
+
 export const BUTTERFLY_PALETTES = [
   { wing: "#f4f1e6", edge: "#8d8a7c", dot: "#3b3a35" }, // капустница
   { wing: "#e98a3a", edge: "#5a2f14", dot: "#f6e2b8" }, // крапивница

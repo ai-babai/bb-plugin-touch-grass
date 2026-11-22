@@ -1,10 +1,13 @@
 import type { Blade } from "./blades";
 import type { Flower } from "./garden";
 import { bladeLength, regrowth, STUBBLE, visibleBladeHeight } from "./draw-blade";
-import { drawMower } from "./meadow-critters";
+import { drawMower, tallBoost } from "./meadow-critters";
 
 const SELF_MOW_REACH = 7;
 const SCYTHE_MIN_PX = 1.5; // коса срезает почти под корень, косилка оставляет стерню STUBBLE
+
+/** Масштаб косилки: мельче в низкой полосе, крупнее в высоких «Зарослях». */
+const mowerScale = (height: number) => Math.max(0.5, Math.min(1, height / 40)) * tallBoost(height);
 
 interface MowingSite {
   readonly width: number;
@@ -21,6 +24,10 @@ interface MowingSite {
   markCut(): void;
   onPass(now: number): void;
   onStroke(x: number, now: number): void;
+  /** «Заросли»: срез травинки до доли keep её полной длины пишется в часы луга. */
+  cutWild(b: Blade, keep: number): void;
+  /** Полный проход косилки (или мгновенный покос) завершён. */
+  onMowed(): void;
 }
 
 export function createMowing(site: MowingSite) {
@@ -34,6 +41,11 @@ export function createMowing(site: MowingSite) {
   const cutBlade = (b: Blade, now: number, spare: number[], keep = STUBBLE) => {
     if (nearFlower(b.x, spare)) return false;
     if (regrowth(b, now) <= keep + 0.04) return false; // уже не выше лезвия
+    if (b.wild !== undefined) {
+      b.wild = keep;
+      site.cutWild(b, keep);
+      return true;
+    }
     b.cutAt = now;
     b.cutTo = keep;
     return true;
@@ -73,6 +85,7 @@ export function createMowing(site: MowingSite) {
     site.onPass(now);
     if (site.reduced) {
       for (const b of site.blades) cutBlade(b, now, spare);
+      site.onMowed();
       site.markCut();
       site.draw();
       site.regrow();
@@ -80,8 +93,9 @@ export function createMowing(site: MowingSite) {
     }
     const dir = mowDir;
     mowDir = -mowDir; // следующий проход едет навстречу
-    const from = dir > 0 ? -28 : site.width + 28;
-    const to = dir > 0 ? site.width + 28 : -28;
+    const off = 28 * tallBoost(site.height); // начинает и заканчивает проход целиком за краем
+    const from = dir > 0 ? -off : site.width + off;
+    const to = dir > 0 ? site.width + off : -off;
     const seconds = Math.max(2.2, Math.min(4.5, site.width / 170));
     mower = { x: from, dir, start: now, from, to, speed: (to - from) / seconds / 1000, spare };
     site.animate();
@@ -90,7 +104,8 @@ export function createMowing(site: MowingSite) {
   const stepMower = (now: number) => {
     if (!mower) return false;
     mower.x = mower.from + mower.speed * (now - mower.start);
-    const front = mower.x + mower.dir * 9 * Math.max(0.5, Math.min(1, site.height / 40));
+    const size = mowerScale(site.height);
+    const front = mower.x + mower.dir * 9 * size;
     for (const b of site.blades) {
       if (b.cutAt >= mower.start) continue;
       if (mower.dir * (b.x - front) > 0) continue;
@@ -98,11 +113,12 @@ export function createMowing(site: MowingSite) {
     }
     for (const f of site.flowers) {
       const d = f.at * site.width - mower.x;
-      if (Math.abs(d) < 14) f.vel += mower.dir * 0.12; // цветы покачиваются, но остаются
+      if (Math.abs(d) < 14 * tallBoost(site.height)) f.vel += mower.dir * 0.12; // цветы покачиваются, но остаются
     }
     site.markCut();
     if (mower.dir * (mower.x - mower.to) >= 0) {
       mower = null;
+      site.onMowed();
       site.regrow();
     }
     return true;
@@ -157,11 +173,12 @@ export function createMowing(site: MowingSite) {
         const now = performance.now();
         for (const b of site.blades) if (b.cutAt < mower.start) cutBlade(b, now, mower.spare);
         mower = null;
+        site.onMowed();
       }
     },
     paint(ctx: CanvasRenderingContext2D, now: number, dark: boolean) {
       const ground = site.height;
-      if (mower) drawMower(ctx, mower.x, ground, mower.dir, Math.max(0.5, Math.min(1, site.height / 40)), now, dark);
+      if (mower) drawMower(ctx, mower.x, ground, mower.dir, mowerScale(site.height), now, dark);
       for (const c of clippings) {
         ctx.globalAlpha = Math.max(0, Math.min(1, c.life * 2));
         ctx.fillStyle = c.color;

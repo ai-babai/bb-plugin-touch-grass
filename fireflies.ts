@@ -1,9 +1,15 @@
 import { gardenCapacity, type Flower } from "./garden";
+import { tallBoost } from "./meadow-critters";
 
 const FIREFLY_REACH = 40; // светлячок чувствует движение только рядом, px
 const WAKE_AT = 320; // сколько «поглаженных» пикселей нужно, чтобы разбудить
 const FADE_PER_S = 55; // без поглаживания светлячок снова засыпает
 const FLY_MS = 1600;
+
+/** Светлячок в высоких «Зарослях» растёт мягче гостей (до ×1.7), чтобы не заслонять текст чата. full — высота травы, px. */
+function fireflySize(full: number) {
+  return 1 + (tallBoost(full * 1.04 + 3) - 1) * 0.5;
+}
 
 interface Habitat {
   element: HTMLElement;
@@ -47,7 +53,9 @@ export function createFireflies(host: Habitat) {
   const placeFirefly = (full: number) => {
     if (!firefly) return;
     const left = `${firefly.x.toFixed(1)}px`;
-    const bottom = `${(2 + Math.min(full * 0.32, 14)).toFixed(1)}px`;
+    const size = fireflySize(full);
+    const bottom = `${(2 + Math.min(full * 0.32, 14 * size)).toFixed(1)}px`;
+    flyEl.style.setProperty("--tg-fly", size.toFixed(2));
     if (flyEl.style.left !== left) flyEl.style.left = left;
     if (flyEl.style.bottom !== bottom) flyEl.style.bottom = bottom;
   };
@@ -107,10 +115,11 @@ export function createFireflies(host: Habitat) {
 
   const feedFirefly = (px: number, dx: number, now: number) => {
     if (!firefly || firefly.waking) return;
+    const reach = FIREFLY_REACH * fireflySize(host.read().full);
     const d = Math.abs(px - firefly.x);
-    if (d > FIREFLY_REACH) return;
+    if (d > reach) return;
     decay(now);
-    firefly.energy += Math.min(40, Math.abs(dx)) * (1 - d / FIREFLY_REACH);
+    firefly.energy += Math.min(40, Math.abs(dx)) * (1 - d / reach);
     showEnergy();
     if (firefly.energy >= WAKE_AT) {
       wake();
