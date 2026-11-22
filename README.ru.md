@@ -8,7 +8,7 @@ created: "2026-11-22"
 
 # Погладить траву
 
-[English](README.md) · [Страница приложения](https://popkov.dev/apps/touch-grass/)
+[English](README.md) · [Страница приложения](https://popkov.dev/apps/touch-grass/) · [Заявка в BB Market](https://github.com/get-bb/marketplace/pull/1034)
 
 Пришло время погладить траву. Над полем ввода в каждом чате [BB](https://getbb.app) растёт свой луг. Проведи курсором по траве, чтобы пригнуть стебли. Погладь мерцающий огонёк — светлячок улетит, а на его месте раскроется цветок.
 

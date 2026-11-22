@@ -8,7 +8,7 @@ created: "2026-11-22"
 
 # Touch Grass for BB
 
-[Русский](README.ru.md) · [Touch Grass on popkov.dev](https://popkov.dev/en/apps/touch-grass/)
+[Русский](README.ru.md) · [Touch Grass on popkov.dev](https://popkov.dev/en/apps/touch-grass/) · [BB Market submission](https://github.com/get-bb/marketplace/pull/1034)
 
 It's time to touch grass. A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
