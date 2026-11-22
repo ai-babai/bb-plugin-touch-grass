@@ -1,5 +1,6 @@
 import { rosetteOvals, rosetteSize } from "./dandelion";
 import { leafOvals, type Oval, stemOf } from "./flower-art";
+import { tipOval } from "./flower-bud";
 import { DANDELION } from "./flower-growth";
 import type { FlowerShape } from "./garden";
 import { bushParts, STRAWBERRY } from "./strawberry";
@@ -21,8 +22,13 @@ const STALK_HALF_PX = 1.5;
 /** Видимые части растения кроме стебля и головки цветка — та же раскладка, что у рисунка. */
 export function plantParts(plant: { kind: number; at: number }, shape: FlowerShape, ground: number): { ovals: Oval[]; stalks: Stalk[] } {
   if (plant.kind === STRAWBERRY) return bushParts(shape, ground, plant.at);
-  if (plant.kind === DANDELION) return { ovals: rosetteOvals(shape.x, ground, rosetteSize(shape.stem, shape.leaf), shape.bend), stalks: [] };
-  return { ovals: leafOvals(plant.kind, stemOf(shape, ground), shape.leaf), stalks: [] };
+  const ovals = plant.kind === DANDELION
+    ? rosetteOvals(shape.x, ground, rosetteSize(shape.stem, shape.leaf), shape.bend)
+    : leafOvals(plant.kind, stemOf(shape, ground), shape.leaf);
+  // Верхушка нераскрытого растения (листочки или бутон) режется и через самый кончик.
+  const tip = tipOval(shape.headX, shape.headY, shape.tip ?? 0, shape.bud, shape.bend);
+  if (tip) ovals.push(tip);
+  return { ovals, stalks: [] };
 }
 
 /** Отрезок a→b проходит через эллипс (с запасом margin). */

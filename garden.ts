@@ -1,7 +1,8 @@
 import { daisyVeins, drawLeaves, SPROUT_DARK, SPROUT_LIGHT, type Stem, stemLength } from "./flower-art";
-import { bushShape, drawStrawberryBush, LEAF, STRAWBERRY } from "./strawberry";
+import { blossomFade, blossomOf, bushShape, drawStrawberryBush, LEAF, STRAWBERRY } from "./strawberry";
 import { DANDELION, flowerAge, flowerStage, seedPhase } from "./flower-growth";
 import { DANDELION_PETAL, drawDandelionHead, drawRosette, puffRadius, rosetteSize, SEEDS } from "./dandelion";
+import { drawTip } from "./flower-bud";
 
 export const BLOOM_MS = 800;
 /**
@@ -88,7 +89,7 @@ export function ripenBerry(flower: Flower | undefined, now: number) {
  * Где сейчас цветок в px холста: основание стебля, головка и её радиус. Общая мера для рисунка,
  * попаданий, посадки пчёл и покоса. r — лепестки; bud — радиус закрытого бутона; leaf — доля листьев.
  */
-export type FlowerShape = { x: number; headX: number; headY: number; r: number; stem: number; bend: number; open: number; bud: number; leaf: number; young?: boolean };
+export type FlowerShape = { x: number; headX: number; headY: number; r: number; stem: number; bend: number; open: number; bud: number; leaf: number; young?: boolean; tip?: number };
 
 export function flowerShape(f: Flower, width: number, full: number, ground: number, shown: number, now: number): FlowerShape {
   const x = f.at * width;
@@ -112,9 +113,24 @@ export function flowerShape(f: Flower, width: number, full: number, ground: numb
     headY: ground - stem * (1 - 0.15 * bend * bend),
     r: head * pop * stage.petals * (f.kind === DANDELION ? puffRadius(1, seedPhase(f)) : 1), // шарик одуванчика шире корзинки
     bud: head * stage.bud,
+    tip: head * (1 - stage.petals), // верхушка нераскрытого растения: листочки → бутон; у раскрытого 0
     leaf: pop * stage.leaf,
     young: age < 0.35, // росток светлее травы, к бутону зеленеет как взрослый
   };
+}
+
+const OPEN_PETALS = 0.6; // венчик раскрыт настолько, что на него можно сесть
+const SEED_BALL = 0.25; // одуванчик уже белеет шариком семян
+
+/**
+ * Можно ли пчеле сесть на растение: только раскрытый цветок. Росток, закрытый бутон,
+ * белый или облетевший шарик одуванчика — нет. Земляника — пока не опылена (и пока
+ * её белый цветочек ещё не отцвёл после опыления); спелая красная — нет.
+ */
+export function canLand(f: Flower, now = performance.now(), wall = Date.now()) {
+  if (f.kind === STRAWBERRY) return blossomFade(f.ripe, now) > 0.15;
+  if (flowerStage(flowerAge(f, wall)).petals < OPEN_PETALS) return false;
+  return f.kind !== DANDELION || seedPhase(f, wall) < SEED_BALL;
 }
 
 /**
@@ -135,7 +151,8 @@ export function createFlowerSlots(list: () => Flower[], busy: () => boolean) {
     return slots;
   };
   return {
-    heads: () => sync().map(f => (f?.hx !== undefined && f.hy !== undefined ? { x: f.hx, y: f.hy } : undefined)),
+    // Пчела видит только раскрытые цветы; закрывшийся цветок пропадает из её карты, и она уходит.
+    heads: () => sync().map(f => (f?.hx !== undefined && f.hy !== undefined && canLand(f) ? { x: f.hx, y: f.hy } : undefined)),
     at: (i: number) => i < 0 ? undefined : sync()[i] ?? undefined,
   };
 }
@@ -145,28 +162,13 @@ function stemColor(young: boolean | undefined, dark: boolean) {
   return dark ? "hsla(105, 32%, 42%, 0.95)" : "hsla(105, 38%, 32%, 0.95)";
 }
 
-/** Закрытый бутон: зелёная чашечка, сквозь которую проступает цвет лепестков. */
-function drawBud(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, bend: number, petal: string, dark: boolean) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(bend * 0.6);
-  ctx.beginPath();
-  ctx.ellipse(0, -r * 0.35, r * 0.55, r * 0.95, 0, 0, Math.PI * 2);
-  ctx.fillStyle = petal;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 0.75, r * 0.7, 0, 0, Math.PI);
-  ctx.fillStyle = dark ? "#5c9a48" : "#4d8a3b";
-  ctx.fill();
-  ctx.restore();
-}
-
 export function drawFlower(ctx: CanvasRenderingContext2D, f: Flower, width: number, full: number, ground: number, shown: number, dark: boolean, now: number) {
   const shape = flowerShape(f, width, full, ground, shown, now);
   const { x, stem, bend, headX, headY, r } = shape;
   if (f.kind === STRAWBERRY) {
-    f.hx = headX;
-    f.hy = headY;
+    const blossom = blossomOf(shape, f.at); // пчела садится на белый цветочек
+    f.hx = blossom.x;
+    f.hy = blossom.y;
     drawStrawberryBush(ctx, shape, ground, f.at, f.ripe, now, dark);
     return;
   }
@@ -179,11 +181,11 @@ export function drawFlower(ctx: CanvasRenderingContext2D, f: Flower, width: numb
   ctx.stroke();
   if (f.kind === DANDELION) drawRosette(ctx, x, ground, rosetteSize(stem, shape.leaf), bend, rosetteColor(shape.young, dark));
   else drawLeaves(ctx, f.kind, curve, shape.leaf, dark, shape.young);
-  // Пчеле есть куда сесть, когда у ростка появился бутон или головка.
-  const head = shape.bud >= 0.3 || r >= 0.3;
-  f.hx = head ? headX : undefined;
-  f.hy = head ? headY : undefined;
-  if (shape.bud >= 0.3) drawBud(ctx, headX, headY, shape.bud, bend, FLOWER_KINDS[f.kind].petal, dark);
+  // Touch follows the visible tip throughout growth. Only open flowers can host a bee.
+  f.hx = headX;
+  f.hy = headY;
+  // Верхушка видна с первого кадра: листочки → бутон; лепестки раскрываются поверх неё.
+  drawTip(ctx, headX, headY, shape.tip ?? 0, shape.bud, bend, FLOWER_KINDS[f.kind].petal, rosetteColor(shape.young, dark), dark);
   if (r >= 0.3) drawOpenHead(ctx, f, shape, dark);
 }
 

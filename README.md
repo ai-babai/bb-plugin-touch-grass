@@ -43,7 +43,7 @@ Grass blades cross in front of the leaves. The mature flower heads rise to diffe
 
 ![A yellow dandelion ripens and releases its seeds when shaken](docs/media/dandelion.gif)
 
-Butterflies visit the grass. Once flowers bloom, bees can land on them. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
+Butterflies visit the grass. Bees wait for open petals. A closed bud or a white dandelion seed head is left to ripen undisturbed. Wild strawberry plants sometimes take root between the flowers. Look for the low cluster of leaves with berries on their own stalks. After a cut, the meadow waits about two minutes before a new plant can grow. Compact mode keeps even a mature meadow just 38 px tall on desktop. Touch controls have room for a fingertip. The game also works with reduced motion.
 
 ![Mobile meadow settings with the growth slider, countdown and Grow now button](docs/media/settings.png)
 

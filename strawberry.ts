@@ -12,6 +12,8 @@ const VEIN = "#8cc46a";
 const STALK = "#5f8f3f";
 const BERRY = { green: "#b4d288", red: "#d8333b", sepal: "#4c8a36", seed: "#f2d27a" };
 const RIPEN_MS = 1200;
+const BLOSSOM_FADE_MS = 8000; // после опыления цветочек вянет за несколько секунд
+const BLOSSOM = { petal: "#fbfaf4", center: "#e8c443" };
 
 /** Положение кустика в px холста — та же мера, что у цветка (FlowerShape). */
 export type BushShape = { x: number; headX: number; headY: number; r: number; stem: number; bend: number; open: number };
@@ -25,6 +27,42 @@ export function bushShape(x: number, ground: number, full: number, shown: number
     headY: ground - stem * (1 - 0.1 * bend * bend),
     r: (4 + 3 * shown) * open,
   };
+}
+
+/**
+ * Пока ягоды не опылены, над кустиком на своей плодоножке держится один крошечный
+ * белый цветок — на него садится пчела. После опыления он мягко вянет.
+ */
+export function blossomOf(s: BushShape, at: number) {
+  const side = Math.sin(at * 91.7) > 0 ? 1 : -1;
+  return { x: s.headX + side * s.r * 0.7, y: s.headY - s.r * 0.95, size: Math.max(1.2, s.r * 0.42) };
+}
+
+/** Насколько виден цветочек: 1 — до опыления, затем вянет; 0 — ягоды уже спелые. */
+export function blossomFade(ripe: number | undefined, now: number) {
+  if (ripe === undefined) return 1;
+  if (!ripe) return 0;
+  return Math.max(0, 1 - (now - ripe) / BLOSSOM_FADE_MS);
+}
+
+function drawBlossom(ctx: CanvasRenderingContext2D, s: BushShape, ground: number, at: number, fade: number) {
+  const b = blossomOf(s, at);
+  ctx.save();
+  ctx.globalAlpha *= fade;
+  curve(ctx, s.x, ground, (s.x + b.x) / 2, b.y + s.stem * 0.2, b.x, b.y, STALK, 0.6);
+  ctx.translate(b.x, b.y);
+  ctx.fillStyle = BLOSSOM.petal;
+  for (let i = 0; i < 5; i++) {
+    ctx.rotate((Math.PI * 2) / 5);
+    ctx.beginPath();
+    ctx.ellipse(0, -b.size * 0.55, b.size * 0.42, b.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(0, 0, b.size * 0.32, 0, Math.PI * 2);
+  ctx.fillStyle = BLOSSOM.center;
+  ctx.fill();
+  ctx.restore();
 }
 
 /** Трилистник: три овальных листочка с жилкой, расходятся от конца черешка. */
@@ -152,5 +190,7 @@ export function drawStrawberryBush(ctx: CanvasRenderingContext2D, s: BushShape, 
     curve(ctx, x, ground, b.cx, b.cy, b.bx, b.by - b.size * 0.6, STALK, 0.7);
     drawBerry(ctx, b.bx, b.by, b.size, p);
   }
+  const fade = blossomFade(ripe, now);
+  if (fade > 0) drawBlossom(ctx, s, ground, at, fade);
   ctx.restore();
 }

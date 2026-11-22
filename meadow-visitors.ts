@@ -212,7 +212,6 @@ export function createVisitors(host: VisitorHost) {
     const { width, height, meadow } = host.bounds();
     f.flower = f.kind === "bee" ? pickFlower(-1) : -1;
     const head = host.flowerHeads()[f.flower];
-    if (head) host.pollinate(f.flower, false);
     f.mode = "sit";
     f.vx = f.vy = 0;
     f.x = head ? head.x : rand(20, Math.max(21, width - 20));
@@ -225,6 +224,10 @@ export function createVisitors(host: VisitorHost) {
       host.redraw();
       queue(20_000 + Math.random() * 20_000);
     }, STILL_MS);
+    if (head) {
+      host.redraw(); // Show the visitor on the open blossom before pollination changes it.
+      host.pollinate(f.flower, false);
+    }
   };
 
   const planNext = (f: Flight) => {
@@ -251,7 +254,10 @@ export function createVisitors(host: VisitorHost) {
     timer = 0;
     if (disposed || v) return;
     const kind = chooseKind();
-    if (!kind) return; // нужный гость выключен; setGuests позовёт снова
+    if (!kind) {
+      if (host.guests().bee) queue(15_000); // A closed bud can open while this chat stays on screen.
+      return;
+    }
     if (!host.canArrive() || host.bounds().width < 120) {
       queue(15_000);
       return;
@@ -327,6 +333,12 @@ export function createVisitors(host: VisitorHost) {
 
   const stepSit = (f: Flight, now: number, dt: number) => {
     const head = f.kind === "bee" ? host.flowerHeads()[f.flower] : undefined;
+    if (f.kind === "bee" && !head) {
+      // Цветок закрылся, отцвёл или срезан: пчела не сидит на пустом стебле.
+      planNext(f);
+      kickToward(f, 8);
+      return;
+    }
     const ease = Math.min(1, dt * 14);
     const tx = head ? head.x : f.tx;
     const ty = head ? perchY(head) : f.ty;
@@ -384,6 +396,10 @@ export function createVisitors(host: VisitorHost) {
   const draw = (ctx: CanvasRenderingContext2D, now: number, dark: boolean) => {
     const f = v;
     if (!f) return;
+    if (host.reduced() && f.kind === "bee" && !host.flowerHeads()[f.flower]) {
+      gone(15_000);
+      return;
+    }
     const { height } = host.bounds();
     const scale = clamp(height / 36, 0.75, 1.2) * tallBoost(height);
     const y = f.y + flutterOffset(f, now);

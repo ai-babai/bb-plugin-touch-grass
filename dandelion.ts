@@ -143,6 +143,32 @@ function puffHead(ctx: CanvasRenderingContext2D, r: number, phase: number, left:
   ctx.fill();
 }
 
+/**
+ * Между жёлтым цветком и шариком корзинка сомкнута: зелёная обёртка с отогнутыми листочками
+ * внизу и кисточкой на кончике — жёлтой, пока цветок отцветает, белёсой перед шариком.
+ */
+function closedHead(ctx: CanvasRenderingContext2D, r: number, phase: number, dark: boolean) {
+  const c = Math.max(0, 1 - Math.abs(phase - 0.5) / 0.32); // 1 — сомкнута полностью
+  if (c <= 0) return;
+  const s = r * (0.55 + 0.45 * c);
+  ctx.fillStyle = dark ? "#5c9a48" : "#4d8a3b";
+  for (const a of [-1.1, 1.1]) { // отогнутые наружные листочки обёртки
+    ctx.save();
+    ctx.rotate(Math.PI + a * 0.8);
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.35, s * 0.1, s * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 0.55, s * 0.34, s * 0.62, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 1.12, s * 0.22, s * 0.16, 0, 0, Math.PI * 2);
+  ctx.fillStyle = phase < 0.5 ? YELLOW_DEEP : dark ? "#efeee6" : "#d8d4c4";
+  ctx.fill();
+}
+
 /** Головка одуванчика в её точке: жёлтая корзинка, затем ажурный шарик. outer — внешний радиус (flowerShape.r). */
 export function drawDandelionHead(ctx: CanvasRenderingContext2D, p: Plant, x: number, y: number, outer: number, phase: number, dark: boolean) {
   const r = outer / puffRadius(1, phase);
@@ -150,6 +176,7 @@ export function drawDandelionHead(ctx: CanvasRenderingContext2D, p: Plant, x: nu
   ctx.translate(x, y);
   ctx.rotate(p.bend * 0.5);
   ctx.globalAlpha = dark ? 0.92 : 1;
+  closedHead(ctx, r, phase, dark);
   yellowHead(ctx, r, phase);
   puffHead(ctx, r, phase, seedsLeft(p), dark);
   ctx.restore();
