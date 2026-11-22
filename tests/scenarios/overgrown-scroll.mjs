@@ -97,17 +97,22 @@ export default [
       await m.page.waitForFunction(y => document.querySelector(".chat").scrollTop > y + 50, start);
       assert.deepEqual(await m.garden(), before);
     })],
-  ["a vertical swipe on the timer thumb scrolls the chat and preserves the period", ctx =>
+  ["a vertical swipe on the timer thumb or track scrolls without changing the period", ctx =>
     withMeadow(ctx, { ...phone, size: "overgrown" }, async m => {
       await m.bb(dockInScroller);
       await m.toggle.tap();
       const slider = m.root.getByRole("slider");
-      const track = await slider.boundingBox();
-      const minutes = await slider.inputValue();
-      await m.bb(() => { document.querySelector(".chat").scrollTop = 1200; });
-      const start = await settle(m);
-      await swipe(m, { x: track.x + track.width / 2, y: track.y + track.height / 2 }, 100);
-      await m.page.waitForFunction(y => document.querySelector(".chat").scrollTop < y - 50, start);
-      assert.equal(await slider.inputValue(), minutes);
+      const thumbMark = m.root.locator(".tg-timer-scale span.is-current");
+      const minutes = await slider.getAttribute("aria-valuetext");
+      for (const onThumb of [false, true]) {
+        await m.bb(() => { document.querySelector(".chat").scrollTop = 1200; });
+        const start = await settle(m);
+        const track = await slider.boundingBox();
+        const mark = await thumbMark.boundingBox();
+        const x = onThumb ? mark.x + mark.width / 2 : track.x + track.width / 2;
+        await swipe(m, { x, y: track.y + track.height / 2 }, 100);
+        await m.page.waitForFunction(y => document.querySelector(".chat").scrollTop < y - 50, start);
+        assert.equal(await slider.getAttribute("aria-valuetext"), minutes);
+      }
     })],
 ];

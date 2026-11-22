@@ -53,7 +53,7 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
   const now = useNow(Math.max(ui.readyAt, ui.flowerDeadline));
   const minutes = ui.regrowMinutes;
   const units = minutesToUnits(minutes);
-  const dragging = useRef(false); // палец или мышь ведут ручку: минута — ближайшая к ним
+  const dragStart = useRef<number | null>(null);
   const fill = `${(units / SCALE_UNITS) * 100}%`;
   // Стрелки — ровно на минуту (деления шкалы мельче минуты), Home/End — края шкалы.
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -84,12 +84,16 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
           aria-valuetext={`${minutes} ${copy.mins}`}
           style={{ "--tg-fill": fill } as CSSProperties}
           onKeyDown={onKeyDown}
-          onPointerDown={() => { dragging.current = true; }}
-          onPointerUp={() => { dragging.current = false; }}
-          onPointerCancel={() => { dragging.current = false; }}
-          onLostPointerCapture={() => { dragging.current = false; }}
+          onPointerDown={() => { dragStart.current = minutes; }}
+          onPointerUp={() => { dragStart.current = null; }}
+          onPointerCancel={() => {
+            // A vertical swipe scrolls the chat. Undo any track jump from the initial touch.
+            if (dragStart.current !== null && dragStart.current !== minutes) ui.choosePeriod(dragStart.current);
+            dragStart.current = null;
+          }}
+          onLostPointerCapture={() => { dragStart.current = null; }}
           onChange={event => {
-            const next = minutesFromInput(Number(event.target.value), minutes, dragging.current);
+            const next = minutesFromInput(Number(event.target.value), minutes, dragStart.current !== null);
             if (next !== minutes) ui.choosePeriod(next);
           }}
         />
