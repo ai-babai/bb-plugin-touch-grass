@@ -26,7 +26,7 @@ It's time to touch grass. A little meadow grows above the message box in each [B
 
 ![Using the scythe to cut a path through the meadow](docs/media/scythe.gif)
 
-With the scythe put away, swipe the grass with a finger to bend a wave of blades. They spring back when you let go.
+With the scythe put away, swipe up or down over the grass to scroll the chat. Swipe sideways to bend a wave of blades. They spring back when you let go.
 
 ![A finger brushing a wave through the grass on a phone](docs/media/touch.gif)
 

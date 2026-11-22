@@ -1,5 +1,5 @@
 import type { Blade } from "./blades";
-import { bladeLength } from "./draw-blade";
+import { bladeLength, bladeWidth, tipRise } from "./draw-blade";
 
 /**
  * Поверхность попаданий «Зарослей»: прозрачный слой размером с холст, обрезанный
@@ -28,12 +28,26 @@ export type ProfileInput = {
   now: number;
 };
 
-/** Отмечает стебель от основания до верхушки: собственный наклон уводит её в сторону. */
+/**
+ * Отмечает стебель в покое так, как его рисует paintBlade: кривая от основания
+ * через (lean·h·0.15, 0.55·h) к верхушке (lean·h, h·tipRise). У наклонённой
+ * травинки над основанием высота меньше, чем у верхушки, — столбцы получают
+ * высоту стебля в своём месте, а не высоту верхушки на всём размахе наклона.
+ */
 function markBlade(bins: number[], b: Blade, h: number) {
-  const tip = b.x + b.lean * h;
-  const from = Math.max(0, Math.floor(Math.min(b.x, tip) / BIN_PX));
-  const to = Math.min(bins.length - 1, Math.floor(Math.max(b.x, tip) / BIN_PX));
-  for (let i = from; i <= to; i++) if (h > bins[i]) bins[i] = h;
+  const reach = b.lean * h;
+  const rise = h * tipRise(b, 0);
+  const half = bladeWidth(b, h) / 2;
+  const steps = Math.ceil(Math.abs(reach) / 2) + 4;
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    const x = b.x + reach * (0.3 * t * (1 - t) + t * t);
+    const y = 1.1 * h * t * (1 - t) + rise * t * t;
+    const side = half * ((1 - t) ** 2 + 0.7 * t * (1 - t)); // контур сужается к верхушке
+    const from = Math.max(0, Math.floor((x - side) / BIN_PX));
+    const to = Math.min(bins.length - 1, Math.floor((x + side) / BIN_PX));
+    for (let i = from; i <= to; i++) if (y > bins[i]) bins[i] = y;
+  }
 }
 
 /** Высоты по столбцам: максимум длины стеблей, расширенный на соседей (качание). */

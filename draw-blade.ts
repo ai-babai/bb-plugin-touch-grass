@@ -28,8 +28,8 @@ export function bladeLength(b: Blade, full: number, visibleUpTo: number, now: nu
 }
 
 /** Насколько верхушка поднята над землёй относительно длины: наклон её опускает. */
-function tipRise(b: Blade) {
-  const bend = Math.max(-1.15, Math.min(1.15, b.bend));
+export function tipRise(b: Blade, bending = b.bend) {
+  const bend = Math.max(-1.15, Math.min(1.15, bending));
   const ratio = Math.min(1, Math.abs(b.lean + bend * 0.8));
   return 1 - 0.32 * ratio * ratio;
 }
@@ -51,9 +51,13 @@ export function renderBlade(ctx: CanvasRenderingContext2D, b: Blade, width: numb
   return b.cutAt !== 0;
 }
 
+/** Ширина травинки длиной h у основания, px. Выше обычного зрелого луга (заросли) стебли шире: силуэт густой, а не штриховой. */
+export function bladeWidth(b: Blade, h: number) {
+  return b.w * (0.6 + 0.4 * Math.min(1, h / 24)) * (1 + Math.max(0, h - TALL_PX) / 140);
+}
+
 function paintBlade(ctx: CanvasRenderingContext2D, b: Blade, h: number, ground: number, seedsVisible: boolean) {
-  // Выше обычного зрелого луга (заросли) стебли шире: силуэт густой, а не штриховой.
-  const w = b.w * (0.6 + 0.4 * Math.min(1, h / 24)) * (1 + Math.max(0, h - TALL_PX) / 140);
+  const w = bladeWidth(b, h);
   const bend = Math.max(-1.15, Math.min(1.15, b.bend));
   const dx = (b.lean + bend * 0.8) * h;
   const tipX = b.x + dx;

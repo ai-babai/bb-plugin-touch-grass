@@ -48,6 +48,20 @@ export default [
     assert.equal(await m.pixels(), rest);
   })],
 
+  ["regrowth pauses drawing behind settings and catches up when the meadow is shown", ctx =>
+    withMeadow(ctx, { rows: turns(50), reducedMotion: "reduce", storage: noGuests }, async m => {
+      await m.mowButton.click();
+      const [cut] = await m.grass();
+      await m.toggle.click();
+      await m.forget();
+      await m.page.clock.fastForward(45_000);
+      assert.deepEqual(await m.bb(() => Object.keys(window.__seen)), [], "no meadow paint under settings");
+      await m.toggle.click();
+      await m.run(100);
+      const [grown] = await m.grass();
+      assert.ok(grown > cut + 8, `regrown grass appears on return: ${cut} -> ${grown}`);
+    })],
+
   ["a hidden tab draws nothing and catches up when shown again", ctx => withMeadow(ctx, { rows: turns(40), waitFor: "none" }, async m => {
     await m.ready(100);
     await m.bb(() => {

@@ -139,8 +139,9 @@
 
 /* Заросли: полоса у композера компактная, холст поднимается над лентой чата.
    Холст указатель не ловит. Ловит прозрачный слой .tg-hit, обрезанный по профилю
-   стоящей травы: над травой — гладить, пригибать и косить (жест не обрывается),
-   в прокосе и вне травы — родные ссылки, выделение и прокрутка чата. */
+   стоящей травы: над травой — гладить, пригибать и косить, в прокосе и вне травы —
+   родные ссылки и выделение. Вертикальный свайп по траве прокручивает чат (pan-y),
+   горизонтальный гладит; только коса забирает касание целиком. */
 .tg-hit { display: none; }
 .tg-meadow.is-overgrown { z-index: 1; }
 .tg-meadow.is-overgrown .tg-canvas { pointer-events: none; }
@@ -151,7 +152,7 @@
   bottom: 0;
   width: 100%;
   clip-path: polygon(0 0, 0 0, 0 0);
-  touch-action: none;
+  touch-action: inherit;
 }
 .tg-meadow.is-overgrown.is-scything .tg-hit { cursor: crosshair; }
 
@@ -407,7 +408,7 @@
   margin: 0;
   background: transparent;
   cursor: pointer;
-  touch-action: none; /* палец тянет ручку, а не листает чат */
+  touch-action: pan-y; /* горизонтальный жест двигает ручку, вертикальный листает чат */
   -webkit-tap-highlight-color: transparent;
 }
 .tg-range::-webkit-slider-runnable-track {

@@ -276,6 +276,9 @@ export function Grass({
     };
 
     const draw = () => {
+      // Луг не виден (настройки, скрытая вкладка): таймеры и отложенные вызовы не рисуют.
+      // Время в траве не теряется — его считают от now; возврат зовёт schedule(), и кадр всё нарисует.
+      if (flipped || document.visibilityState === "hidden") return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
       if (!width) return;
