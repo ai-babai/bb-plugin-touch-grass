@@ -224,8 +224,8 @@ export default [
       assert.ok(await patch() < 0.6, "and Overgrown shows it as well");
     })],
 
-  ["the timer and Grow now work in every size", async ctx => {
-    for (const size of ["compact", "full", "overgrown"]) await withMeadow(ctx, { ...opts, age: 0, size }, async m => {
+  ["without a saved clock every size starts short and offers Grow now", async ctx => {
+    for (const size of ["compact", "full", "overgrown"]) await withMeadow(ctx, { ...opts, age: null, size }, async m => {
       const [fresh] = await m.share();
       await m.toggle.click();
       assert.equal(await minutes(m), "40 мин", `${size}: default period`);
