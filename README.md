@@ -49,7 +49,7 @@ Butterflies visit the grass. Bees wait for open petals. A closed bud or a white 
 
 **Overgrown** is the default for a new installation. In this mode, the grass grows over the messages to about one third of the visible chat. Tap the standing blades to press them down. Cut a path with the scythe and you can tap links through that opening. The mower clears the full width. The mower, bee and butterfly appear larger in this mode.
 
-An Overgrown plot starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open the meadow settings to see the countdown. Drag the slider to choose a 20-, 40- or 60-minute growth period. Choose **Grow now** to fill this chat with tall grass immediately. Mowing starts the timer again.
+An Overgrown plot starts short. It reaches full height in **40 minutes of real time**, including time away from BB. Each thread remembers its own cut patches. Open the meadow settings to see the countdown. Choose any whole minute from 5 to 90. The slider marks 5, 15, 40 and 90 minutes, giving shorter periods more room for fine adjustments. Choose **Grow now** to fill this chat with tall grass immediately. Mowing starts the timer again.
 
 ![Grass grows on demand and a mower clears it to reveal the chat messages](docs/media/overgrown.gif)
 

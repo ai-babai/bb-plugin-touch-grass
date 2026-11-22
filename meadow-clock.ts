@@ -1,5 +1,5 @@
 import { STUBBLE } from "./draw-blade";
-import { GROWTH_PERIODS } from "./meadow-prefs";
+import { isRegrowPeriod } from "./meadow-prefs";
 
 /**
  * Часы «Зарослей»: высота травы зависит только от реального времени (Date.now),
@@ -39,7 +39,7 @@ function isCut(entry: unknown): entry is [number, number] {
 function read(threadId: string): Saved | null {
   try {
     const raw = JSON.parse(window.localStorage.getItem(keyFor(threadId)) ?? "null") as Saved | null;
-    if (raw?.v !== 1 || !Number.isFinite(raw.s) || !GROWTH_PERIODS.some(p => p === raw.p) || !Array.isArray(raw.c)) return null;
+    if (raw?.v !== 1 || !Number.isFinite(raw.s) || !isRegrowPeriod(raw.p) || !Array.isArray(raw.c)) return null;
     return { ...raw, c: raw.c.filter(isCut) };
   } catch {
     return null;

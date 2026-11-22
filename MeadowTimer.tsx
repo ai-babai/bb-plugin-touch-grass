@@ -1,16 +1,13 @@
-import { type CSSProperties, useEffect, useId, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { copy } from "./meadow-copy";
-import { GROWTH_PERIODS } from "./meadow-prefs";
+import { anchorShare, minutesForKey, minutesFromInput, minutesToUnits, REGROW_ANCHORS, REGROW_MIN, REGROW_MAX, SCALE_UNITS } from "./regrow-scale";
 import type { MeadowCardState } from "./useMeadowCard";
 
 /**
  * Часы «Зарослей» над перевёрнутой карточкой: нативный range выбирает время
- * отрастания (20 / 40 / 60 мин), справа — отдельно — сколько осталось до зрелости.
+ * отрастания — любую целую минуту на шкале с опорами 5 / 20 / 40 / 80 (regrow-scale),
+ * ниже — отдельно — сколько осталось до зрелости.
  */
-
-const MIN = GROWTH_PERIODS[0];
-const MAX = GROWTH_PERIODS[GROWTH_PERIODS.length - 1];
-const STEP = GROWTH_PERIODS[1] - GROWTH_PERIODS[0];
 
 function timeLeft(deadline: number, now: number) {
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
@@ -55,7 +52,16 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
   const id = useId();
   const now = useNow(Math.max(ui.readyAt, ui.flowerDeadline));
   const minutes = ui.regrowMinutes;
-  const fill = `${((minutes - MIN) / (MAX - MIN)) * 100}%`;
+  const units = minutesToUnits(minutes);
+  const dragging = useRef(false); // палец или мышь ведут ручку: минута — ближайшая к ним
+  const fill = `${(units / SCALE_UNITS) * 100}%`;
+  // Стрелки — ровно на минуту (деления шкалы мельче минуты), Home/End — края шкалы.
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    const next = minutesForKey(event.key, minutes);
+    if (next === null) return;
+    event.preventDefault();
+    if (next !== minutes) ui.choosePeriod(next);
+  };
 
   return (
     <div className="tg-timer tg-control" role="group" aria-labelledby={`${id}-label`}>
@@ -68,17 +74,29 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
           id={`${id}-range`}
           type="range"
           className="tg-range"
-          min={MIN}
-          max={MAX}
-          step={STEP}
-          value={minutes}
+          min={0}
+          max={SCALE_UNITS}
+          step={1}
+          value={units}
+          aria-valuemin={REGROW_MIN}
+          aria-valuemax={REGROW_MAX}
+          aria-valuenow={minutes} // value — деления шкалы, а читается минута
+          aria-valuenow={minutes}
           aria-valuetext={`${minutes} ${copy.mins}`}
           style={{ "--tg-fill": fill } as CSSProperties}
-          onChange={event => ui.choosePeriod(Number(event.target.value))}
+          onKeyDown={onKeyDown}
+          onPointerDown={() => { dragging.current = true; }}
+          onPointerUp={() => { dragging.current = false; }}
+          onPointerCancel={() => { dragging.current = false; }}
+          onLostPointerCapture={() => { dragging.current = false; }}
+          onChange={event => {
+            const next = minutesFromInput(Number(event.target.value), minutes, dragging.current);
+            if (next !== minutes) ui.choosePeriod(next);
+          }}
         />
         <div className="tg-timer-scale" aria-hidden="true">
-          {GROWTH_PERIODS.map(value => (
-            <span key={value} className={value === minutes ? "is-current" : undefined}>{value}</span>
+          {REGROW_ANCHORS.map((value, i) => (
+            <span key={value} className={value === minutes ? "is-current" : undefined} style={{ left: `${anchorShare(i) * 100}%` }}>{value}</span>
           ))}
         </div>
       </div>

@@ -3,6 +3,8 @@ import { KEY, turns, THREAD, withMeadow } from "../harness/meadow.mjs";
 import { ageMeadow, chooseOvergrown } from "../harness/overgrown.mjs";
 
 const opts = { reducedMotion: "reduce", rows: turns(50), storage: { [KEY.guests]: '{"bee":false,"butterfly":false}' } };
+const periodKey = "bb-touch-grass:regrow-minutes";
+const minutes = m => m.root.locator("output.tg-timer-value").innerText();
 const countdown = m => m.root.getByRole("timer").innerText();
 
 export default [
@@ -14,7 +16,7 @@ export default [
       await m.run(1500);
       assert.ok((await m.grass())[0] < 35, "conversation history alone does not grow an overgrown plot");
       await m.toggle.click();
-      assert.equal(await m.root.getByRole("slider").inputValue(), "40");
+      assert.equal(await minutes(m), "40 мин");
       assert.match(await countdown(m), /39:|40:00/);
       await m.toggle.click();
       await ageMeadow(m, 20);
@@ -35,11 +37,8 @@ export default [
       assert.match(await countdown(m), /39:|40:00/);
     })],
   ["the selected duration survives reopening, and a scythed patch keeps its own time", ctx =>
-    withMeadow(ctx, opts, async m => {
+    withMeadow(ctx, { ...opts, storage: { ...opts.storage, [periodKey]: "20" } }, async m => {
       await chooseOvergrown(m);
-      await m.toggle.click();
-      await m.root.getByRole("slider").press("Home");
-      await m.toggle.click();
       await ageMeadow(m, 21);
       const box = await m.box();
       await m.scytheButton.click();
@@ -53,7 +52,7 @@ export default [
       const [cut, intact] = await m.grass(...areas);
       assert.ok(cut < intact * .4, `reopened path and standing grass: ${cut}, ${intact}`);
       await m.toggle.click();
-      assert.equal(await m.root.getByRole("slider").inputValue(), "20");
+      assert.equal(await minutes(m), "20 мин");
       assert.match(await countdown(m), /\d+:\d\d/);
       await m.toggle.click();
       await ageMeadow(m, 10);
@@ -86,18 +85,38 @@ export default [
       assert.ok(Math.abs(back.x - front.x) < 1 && Math.abs(back.y - front.y) < 1);
       const y = track.y + track.height / 2;
       const input = await m.context.newCDPSession(m.page);
-      for (const [index, position] of [.5, .61, .75, .89, .97].entries()) {
+      // Move the thumb from the 40-minute mark towards 15. Aim three minutes below 40.
+      const marks = await m.root.locator(".tg-timer-scale span").evaluateAll(labels => labels.map(el => {
+        const box = el.getBoundingClientRect();
+        return { minutes: Number(el.textContent), x: box.x + box.width / 2 };
+      }));
+      assert.deepEqual(marks.map(mark => mark.minutes), [5, 15, 40, 90]);
+      const span = marks[2].x - marks[1].x;
+      assert.ok(Math.abs(span - (marks[1].x - marks[0].x)) < 1);
+      assert.ok(Math.abs(span - (marks[3].x - marks[2].x)) < 1);
+      for (const [index, value] of [40, 30, 25, 33, 37].entries()) {
         await input.send("Input.dispatchTouchEvent", { type: index ? "touchMove" : "touchStart",
-          touchPoints: [{ x: track.x + position * track.width, y }] });
+          touchPoints: [{ x: marks[2].x - (40 - value) / 25 * span, y }] });
       }
       await input.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-      await m.run(100);
-      assert.equal(await slider.inputValue(), "60");
-      assert.match(await countdown(m), /44:|45:00/);
-      await slider.press("ArrowLeft");
       await m.run(1100);
-      assert.equal(await slider.inputValue(), "40");
-      assert.match(await countdown(m), /29:|30:00/);
+      assert.equal(await minutes(m), "37 min");
+      assert.match(await countdown(m), /27:4[0-5]/);
+      await m.reload();
+      await m.toggle.tap();
+      assert.equal(await minutes(m), "37 min");
+      assert.match(await countdown(m), /27:[34]\d/);
+      await slider.press("ArrowLeft");
+      assert.equal(await minutes(m), "36 min");
+      await slider.press("Home");
+      for (let value = 5; value <= 90; value++) {
+        assert.equal(await slider.getAttribute("aria-valuetext"), value + " min");
+        if (value < 90) await slider.press("ArrowRight");
+      }
+      await slider.press("PageDown");
+      assert.equal(await minutes(m), "85 min");
+      await slider.press("End");
+      assert.equal(await minutes(m), "90 min");
       await slider.press("Escape");
       assert.equal(await slider.count(), 0);
     })],
@@ -135,7 +154,7 @@ export default [
       await m.run(motion === "reduce" ? 200 : 5000);
       assert.ok((await m.grass())[0] < grown / 3);
       await m.toggle.click();
-      assert.match(await countdown(m), /19:|20:00/);
+      assert.match(await countdown(m), /4:|5:00/);
     });
   }],
 ];

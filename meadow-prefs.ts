@@ -1,3 +1,4 @@
+import { REGROW_MIN, REGROW_MAX } from "./regrow-scale";
 import type { GuestChoice } from "./meadow-visitors";
 
 /**
@@ -10,7 +11,10 @@ export type MeadowSize = "compact" | "full" | "overgrown";
 export const MEADOW_SIZES: readonly MeadowSize[] = ["compact", "full", "overgrown"];
 export type Guests = GuestChoice;
 
-export const GROWTH_PERIODS = [20, 40, 60] as const;
+export function isRegrowPeriod(minutes: number): boolean {
+  return Number.isInteger(minutes) && minutes >= REGROW_MIN && minutes <= REGROW_MAX;
+}
+
 const PERIOD_KEY = "bb-touch-grass:regrow-minutes";
 const SIZE_KEY = "bb-touch-grass:size";
 const GUESTS_KEY = "bb-touch-grass:guests";
@@ -41,7 +45,7 @@ function write(key: string, value: string) {
 
 export function loadRegrowMinutes(): number {
   const stored = Number(read(PERIOD_KEY));
-  return GROWTH_PERIODS.find(minutes => minutes === stored) ?? 40;
+  return isRegrowPeriod(stored) ? stored : 40;
 }
 
 export function saveRegrowMinutes(minutes: number) {
