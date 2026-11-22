@@ -99,6 +99,21 @@ export default [
     assert.ok((await m.seen([RECEPTACLE])).length, "minutes later it turns into a white seed head");
   })],
 
+  ["a closed dandelion keeps a visible calyx between the yellow bloom and white seed head", async ctx => {
+    for (const [colorScheme, calyx, tuft] of [
+      ["dark", "#5c9a48", "#efeee6"], ["light", "#4d8a3b", "#d8d4c4"],
+    ]) {
+      await withMeadow(ctx, bed({ at: 0.5, kind: 5, planted: CLOCK_START - 16 * 60_000 }, {
+        colorScheme, background: colorScheme === "dark" ? "#141414" : "#f7f8f3", reducedMotion: "reduce",
+      }), async m => {
+        const [base] = await m.seen([calyx]);
+        const [tip] = await m.seen([tuft]);
+        assert.ok(base && tip, "the green flower case and emerging pale tuft are both drawn");
+        assert.ok(Math.abs(tip.x - base.x) < 4, "the tuft belongs to this flower");
+      });
+    }
+  }],
+
   ["with reduced motion a touch quietly takes a few seeds, nothing flies", ctx => withMeadow(ctx, bed({ at: 0.5, kind: 5 }, { reducedMotion: "reduce" }), async m => {
     const [head] = await m.seen([RECEPTACLE]);
     const box = await m.box();
