@@ -102,46 +102,42 @@ export function createFlowerSlots(list: () => Flower[], busy: () => boolean) {
   };
 }
 
-export function drawFlowers(ctx: CanvasRenderingContext2D, flowers: Flower[], width: number, full: number, ground: number, shown: number, dark: boolean) {
-  if (!flowers.length) return;
-  const now = performance.now();
-  for (const f of flowers) {
-    const shape = flowerShape(f, width, full, ground, shown, now);
-    const { x, stem, bend, headX, headY, r } = shape;
-    if (f.kind === STRAWBERRY) {
-      f.hx = headX;
-      f.hy = headY;
-      drawStrawberryBush(ctx, shape, ground, f.at, f.ripe, now, dark);
-      continue;
-    }
-    const curve: Stem = { x, ground, cx: x + bend * stem * 0.1, cy: ground - stem * 0.5, headX, headY, len: stem, bend };
-    ctx.beginPath();
-    ctx.moveTo(x, ground + 0.5);
-    ctx.quadraticCurveTo(curve.cx, curve.cy, headX, headY);
-    ctx.strokeStyle = dark ? "hsla(105, 32%, 42%, 0.95)" : "hsla(105, 38%, 32%, 0.95)";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    drawLeaves(ctx, f.kind, curve, shape.open, dark);
+export function drawFlower(ctx: CanvasRenderingContext2D, f: Flower, width: number, full: number, ground: number, shown: number, dark: boolean, now: number) {
+  const shape = flowerShape(f, width, full, ground, shown, now);
+  const { x, stem, bend, headX, headY, r } = shape;
+  if (f.kind === STRAWBERRY) {
     f.hx = headX;
     f.hy = headY;
-    const kind = FLOWER_KINDS[f.kind];
-    if (r < 0.3) continue;
-    ctx.save();
-    ctx.translate(headX, headY);
-    ctx.rotate(bend * 0.6 + x * 0.37);
-    ctx.globalAlpha = dark ? 0.9 : 1;
-    ctx.fillStyle = kind.petal;
-    for (let i = 0; i < kind.n; i++) {
-      ctx.rotate((Math.PI * 2) / kind.n);
-      ctx.beginPath();
-      ctx.ellipse(0, -r * kind.long * 0.55, r * kind.wide * 0.55, r * kind.long * 0.55, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (f.kind === DAISY && !dark) daisyVeins(ctx, r, kind.n, kind.long);
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
-    ctx.fillStyle = kind.center;
-    ctx.fill();
-    ctx.restore();
+    drawStrawberryBush(ctx, shape, ground, f.at, f.ripe, now, dark);
+    return;
   }
+  const curve: Stem = { x, ground, cx: x + bend * stem * 0.1, cy: ground - stem * 0.5, headX, headY, len: stem, bend };
+  ctx.beginPath();
+  ctx.moveTo(x, ground + 0.5);
+  ctx.quadraticCurveTo(curve.cx, curve.cy, headX, headY);
+  ctx.strokeStyle = dark ? "hsla(105, 32%, 42%, 0.95)" : "hsla(105, 38%, 32%, 0.95)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  drawLeaves(ctx, f.kind, curve, shape.open, dark);
+  f.hx = headX;
+  f.hy = headY;
+  const kind = FLOWER_KINDS[f.kind];
+  if (r < 0.3) return;
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.rotate(bend * 0.6 + x * 0.37);
+  ctx.globalAlpha = dark ? 0.9 : 1;
+  ctx.fillStyle = kind.petal;
+  for (let i = 0; i < kind.n; i++) {
+    ctx.rotate((Math.PI * 2) / kind.n);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * kind.long * 0.55, r * kind.wide * 0.55, r * kind.long * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (f.kind === DAISY && !dark) daisyVeins(ctx, r, kind.n, kind.long);
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = kind.center;
+  ctx.fill();
+  ctx.restore();
 }

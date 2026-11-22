@@ -1,9 +1,10 @@
 import { createFireflies } from "./fireflies";
 import { createNaturalBloom } from "./meadow-bloom";
 import { type Blade, type Theme, boxHeight, buildBlades, colorFor, meadowHeight } from "./blades";
-import { createFlowerSlots, drawFlowers, type Flower, FLOWER_KINDS, gardenCapacity, loadGarden, ripenBerry, saveGarden } from "./garden";
+import { createFlowerSlots, drawFlower, type Flower, FLOWER_KINDS, gardenCapacity, loadGarden, ripenBerry, saveGarden } from "./garden";
 import { advancePlants, brushPlants, leanAway, pressPlants, REACH, tiltFlowers } from "./meadow-physics";
 import { detectTheme } from "./meadow-theme";
+import { drawLayers } from "./meadow-layers";
 import { REGROW_MS, renderBlade, visibleShare } from "./draw-blade";
 import { useEffect, useRef } from "react";
 import "./grass.css";
@@ -325,16 +326,17 @@ export function Grass({
       const seedsVisible = shown > 0.55;
       const now = performance.now();
       const wildGrowing = applyClock();
-      anyCut = false;
-      for (const b of blades) {
-        if (renderBlade(ctx, b, width, ground, full, visibleUpTo, seedsVisible, now)) anyCut = true;
-      }
+      const dark = theme === "dark";
+      // Цветы стоят в траве: передняя доля травинок рисуется поверх них (meadow-layers).
+      anyCut = drawLayers(
+        blades, flowers,
+        b => renderBlade(ctx, b, width, ground, full, visibleUpTo, seedsVisible, now),
+        f => drawFlower(ctx, f, width, full, ground, shown, dark, now),
+      );
       anyCut ||= wildGrowing;
-      drawFlowers(ctx, flowers, width, full, ground, shown, theme === "dark");
       updateHitArea(full, visibleUpTo, now);
       if (canopy) updateFlowerHits(flowers, width, full, shown, now);
       fireflies.place(full);
-      const dark = theme === "dark";
       mowing.paint(ctx, now, dark);
       visitors.draw(ctx, now, dark);
     };
