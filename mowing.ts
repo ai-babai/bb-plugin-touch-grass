@@ -1,14 +1,11 @@
 import type { Blade } from "./blades";
 import { type Flower, FLOWER_KINDS, flowerShape } from "./garden";
 import { scytheHitsFlower } from "./flower-cut";
-import { bladeLength, STUBBLE, visibleBladeHeight } from "./draw-blade";
-import { drawMower, tallBoost } from "./meadow-critters";
+import { bladeLength, visibleBladeHeight } from "./draw-blade";
+import { drawMower, mowerDeckPx, mowerScale, tallBoost } from "./meadow-critters";
 
 const SELF_MOW_REACH = 7;
-const SCYTHE_MIN_PX = 1.5; // коса срезает почти под корень, косилка оставляет стерню STUBBLE
-
-/** Масштаб косилки: мельче в низкой полосе, крупнее в высоких «Зарослях». */
-const mowerScale = (height: number) => Math.max(0.5, Math.min(1, height / 40)) * tallBoost(height);
+const SCYTHE_MIN_PX = 1.5; // коса срезает почти под корень
 
 interface MowingSite {
   readonly width: number;
@@ -42,8 +39,8 @@ export function createMowing(site: MowingSite) {
   const clippings: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
 
   /** Срезает травинку до доли keep её полной высоты; ниже лезвия не трогает. */
-  const cutBlade = (b: Blade, keep = STUBBLE) => {
-    if (b.grown <= keep + 0.04) return false; // уже не выше лезвия
+  const cutBlade = (b: Blade, keep: number, tolerance = 0.04) => {
+    if (b.grown <= keep + tolerance) return false; // уже не выше лезвия
     b.grown = keep;
     site.recordCut(b, keep);
     return true;
@@ -99,7 +96,6 @@ export function createMowing(site: MowingSite) {
     site.onPass(now);
     if (site.reduced) {
       removeFlowers(site.flowers.slice(), now); // косилка убирает и цветы на своём пути
-      for (const b of site.blades) cutBlade(b);
       site.onMowed();
       site.markCut();
       site.draw();
@@ -120,10 +116,13 @@ export function createMowing(site: MowingSite) {
     if (!mower) return false;
     mower.x = mower.from + mower.speed * (now - mower.start);
     const size = mowerScale(site.height);
+    const full = site.bladeHeight;
+    const deck = mowerDeckPx(site.height);
     const front = mower.x + mower.dir * 9 * size;
     for (const b of site.blades) {
       if (mower.dir * (b.x - front) > 0) continue;
-      if (cutBlade(b)) throwClipping(b, b.x); // пройденная травинка уже у лезвия и не режется снова
+      const length = full * b.h;
+      if (cutBlade(b, deck / length, 0.5 / length)) throwClipping(b, b.x); // пройденная травинка уже у лезвия и не режется снова
     }
     const pass = mower;
     removeFlowers(site.flowers.filter(f => pass.dir * (f.at * site.width - front) <= 0), now);
@@ -193,7 +192,6 @@ export function createMowing(site: MowingSite) {
     finishImmediately() {
       clippings.length = 0;
       if (mower) {
-        for (const b of site.blades) cutBlade(b);
         site.cutFlowers([...site.flowers]);
         mower = null;
         site.onMowed();

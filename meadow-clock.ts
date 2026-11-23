@@ -1,4 +1,3 @@
-import { STUBBLE } from "./draw-blade";
 import { isRegrowPeriod } from "./meadow-prefs";
 
 /**
@@ -6,8 +5,7 @@ import { isRegrowPeriod } from "./meadow-prefs";
  * реального времени (Date.now), не от ходов и не от того, открыта ли вкладка.
  * Размер луга задаёт лишь максимум и расположение (Grass.tsx).
  *
- * Модель: доля полной высоты растёт линейно от STUBBLE до 1 за period —
- *   share(t) = STUBBLE + (1 − STUBBLE) · (t − start) / period.
+ * После покоса каждая травинка линейно отрастает от нижней кромки корпуса до своей полной длины за period.
  * start — запуск часов всего луга (первое включение или полный покос).
  * Ручной срез меняет только свой столбец шириной BIN_PX: столбец получает
  * «потолок» в долях полной высоты луга (не отдельной травинки — линия среза ровная),
@@ -25,6 +23,8 @@ import { isRegrowPeriod } from "./meadow-prefs";
  * (с отсрочкой), смены периода и при уходе со страницы, а не в кадре.
  */
 
+// Смещение сохранённых срезов в формате v1. Высоту корпуса задаёт рисунок косилки.
+const CUT_ORIGIN = 0.16;
 const BIN_PX = 6;
 const SAVE_DELAY_MS = 800;
 const MINUTE = 60_000;
@@ -47,7 +47,7 @@ function read(threadId: string): Saved | null {
   }
 }
 
-/** Без сохранённых часов луг любого размера начинается короткой травой (STUBBLE) и растёт за period. */
+/** Без сохранённых часов луг любого размера начинается короткой травой и растёт за period. */
 export function createMeadowClock(threadId: string, minutes: number, onReady: (readyAt: number) => void) {
   let period = minutes * MINUTE;
   let start = Date.now();
@@ -55,7 +55,7 @@ export function createMeadowClock(threadId: string, minutes: number, onReady: (r
   const cuts = new Map<number, number>(); // столбец → виртуальный старт, мс
   let saveTimer = 0;
 
-  const rate = () => (1 - STUBBLE) / period;
+  const rate = () => (1 - CUT_ORIGIN) / period;
 
   const save = () => {
     window.clearTimeout(saveTimer);
@@ -119,16 +119,18 @@ export function createMeadowClock(threadId: string, minutes: number, onReady: (r
      * Доля собственной полной длины (0..1) травинки в точке x, px, с относительной
      * длиной h (Blade.h) на момент now (Date.now).
      */
-    share(x: number, h: number, now: number) {
-      const grown = (at: number) => STUBBLE + rate() * (now - at);
+    share(x: number, h: number, now: number, deckShare: number) {
+      const floor = Math.min(1, deckShare / h);
+      const grown = floor + (1 - floor) * ((now - start) / period);
       const cap = cuts.get(Math.floor(x / BIN_PX));
-      const share = Math.min(grown(start), cap === undefined ? 1 : grown(cap) / h);
+      const limit = cap === undefined ? 1 : (CUT_ORIGIN + rate() * (now - cap)) / h;
+      const share = Math.min(grown, limit);
       return Math.max(0, Math.min(1, share));
     },
     /** Ручной срез столбца с травинкой x до высоты top в долях полной высоты луга. */
     cut(x: number, top: number, now: number) {
       const bin = Math.floor(x / BIN_PX);
-      const at = now - (top - STUBBLE) / rate();
+      const at = now - (top - CUT_ORIGIN) / rate();
       if (at <= Math.max(start, cuts.get(bin) ?? start)) return;
       cuts.set(bin, at);
       latestStart = Math.max(latestStart, at);

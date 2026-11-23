@@ -16,6 +16,19 @@ export function tallBoost(height: number, cap = 2.4) {
   return Math.max(1, Math.min(cap, Math.sqrt(height / TALL_BOX_PX)));
 }
 
+/** Масштаб газонокосилки на полосе высотой height: мельче в низкой полосе, крупнее в высоких «Зарослях». */
+export function mowerScale(height: number) {
+  return Math.max(0.5, Math.min(1, height / 40)) * tallBoost(height);
+}
+
+/** Нижний край тёмной юбки корпуса над землёй в единицах рисунка drawMower (юбка — y от −5 до −3). */
+const DECK_UNITS = 3;
+
+/** Высота дна режущего корпуса над землёй, px: уровень среза при проходе. */
+export function mowerDeckPx(height: number) {
+  return DECK_UNITS * mowerScale(height);
+}
+
 export const BUTTERFLY_PALETTES = [
   { wing: "#f4f1e6", edge: "#8d8a7c", dot: "#3b3a35" }, // капустница
   { wing: "#e98a3a", edge: "#5a2f14", dot: "#f6e2b8" }, // крапивница
@@ -154,7 +167,7 @@ export function drawMower(
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = "#9b2f20";
-  ctx.fillRect(-10, -5, 21, 2);
+  ctx.fillRect(-10, -DECK_UNITS - 2, 21, 2);
   // Мотор.
   ctx.fillStyle = dark ? "#3d3f44" : "#2f3237";
   ctx.beginPath();

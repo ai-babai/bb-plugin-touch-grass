@@ -7,6 +7,7 @@ import { createDandelions } from "./dandelion";
 import { advancePlants, brushPlants, leanAway, pressPlants, REACH, tiltFlowers } from "./meadow-physics";
 import { detectTheme } from "./meadow-theme";
 import { drawLayers } from "./meadow-layers";
+import { mowerDeckPx } from "./meadow-critters";
 import { renderBlade } from "./draw-blade";
 import { useEffect, useRef } from "react";
 import "./grass.css";
@@ -346,13 +347,14 @@ export function Grass({
     /** Высоты травинок по часам луга, во всех размерах. true — ещё растут (редкий тик, профиль попаданий). */
     // Рост луга в целом (0..1) по часам, без учёта местных прокосов.
     let meadowShare = 1;
-    const applyClock = () => {
+    const applyClock = (full: number) => {
+      const deckShare = mowerDeckPx(height) / full;
       const wall = Date.now();
       const t = sprout ? Math.min(1, (performance.now() - sprout.start) / SPROUT_MS) : 1;
       const eased = 1 - (1 - t) ** 3;
       meadowShare = 0;
       for (const b of blades) {
-        b.grown = sproutShare(clock.share(b.x, b.h, wall), sprout?.from.get(b), eased);
+        b.grown = sproutShare(clock.share(b.x, b.h, wall, deckShare), sprout?.from.get(b), eased);
         if (b.grown > meadowShare) meadowShare = b.grown; // нескошенный столбец = часы луга
       }
       if (t >= 1) sprout = null;
@@ -392,7 +394,7 @@ export function Grass({
       const ground = height;
       const seedsVisible = true;
       const now = performance.now();
-      const wildGrowing = applyClock();
+      const wildGrowing = applyClock(full);
       placeFlowers(full, visibleUpTo);
       const dark = theme === "dark";
       // Цветы стоят в траве: передняя доля травинок рисуется поверх них (meadow-layers).
