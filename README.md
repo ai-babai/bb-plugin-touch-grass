@@ -12,7 +12,7 @@ created: "2026-11-22"
 
 It's time to touch grass. A little meadow grows above the message box in each [BB](https://getbb.app) chat. Brush the grass to bend the blades, wake fireflies to grow flowers, or send a lawn mower across the whole strip.
 
-![Wildflowers and tall grass growing over messages in a BB chat](docs/media/market/meadow.webp)
+![In a dark BB chat, the lawn mower drives across the overgrown meadow and cuts it down to reveal the messages](docs/media/mower-lead.gif)
 
 ## Play
 
