@@ -4,8 +4,8 @@ export function ScytheIcon() {
   return (
     <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">
       {/* Длинное косьё с двумя ручками */}
-      <path d="M17.5 22.5C16.2 16 14.8 9.5 13.6 2.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
-      <path d="M12.9 12.6l3.6-.7M14.4 19.2l3-.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" fill="none" />
+      <path d="M17.5 22.5C16.2 16 14.8 9.5 13.6 2.6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      <path d="M12.9 12.6l3.6-.7M14.4 19.2l3-.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
       {/* Полотно: широкий серп от пятки к носку, остриём вниз */}
       <path className="tg-blade" d="M14.4 2.2C9.4 1 3.6 3.6 1 10.4C4.4 6.6 8.8 5 13.9 5.2Z" fill="currentColor" />
     </svg>
@@ -30,6 +30,31 @@ export function SettingsIcon() {
       <circle cx="6" cy="4.5" r="1.6" fill="currentColor" />
       <circle cx="10.5" cy="8" r="1.6" fill="currentColor" />
       <circle cx="5" cy="11.5" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** «Поделиться»: два сцепленных звена по диагонали — ссылка на расширение. */
+export function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">
+      <path
+        d="M10 13.5a4.6 4.6 0 0 0 6.9.5l3-3a4.6 4.6 0 0 0-6.5-6.5l-1.7 1.7M14 10.5a4.6 4.6 0 0 0-6.9-.5l-3 3a4.6 4.6 0 0 0 6.5 6.5l1.7-1.7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+/** Ссылка скопирована. */
+export function DoneIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="100%" height="100%" aria-hidden="true">
+      <path d="m3.5 8.4 3 3 6-6.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
 }

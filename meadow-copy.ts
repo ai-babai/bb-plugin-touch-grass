@@ -7,6 +7,7 @@ const english = {
   scythe: "Scythe", takeScythe: "Pick up the scythe to cut a path",
   usingScythe: "Drag at the height you want to cut. Select the scythe again or press Esc to put it away.",
   mower: "Mow the lawn", brush: "Tap or brush a firefly to grow a flower", wakeFirefly: "Wake the firefly",
+  share: "Share Touch Grass", copied: "Link copied", copyManually: "Link to Touch Grass — select and copy it",
 };
 
 const russian: typeof english = {
@@ -18,6 +19,7 @@ const russian: typeof english = {
   scythe: "Коса: косить вручную", takeScythe: "Взять косу и косить самому",
   usingScythe: "Проведи на высоте среза. Нажми косу ещё раз или Esc, чтобы убрать.",
   mower: "Газонокосилка: покосить луг", brush: "Коснись или погладь огонёк, чтобы вырос цветок", wakeFirefly: "Разбудить светлячка",
+  share: "Поделиться Touch Grass", copied: "Ссылка скопирована", copyManually: "Ссылка на Touch Grass — выделите и скопируйте",
 };
 
 export function meadowCopy(language: string) {

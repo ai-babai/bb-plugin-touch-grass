@@ -233,7 +233,8 @@
 .tg-scythe { color: var(--muted-foreground, #657464); }
 .tg-scythe .tg-blade { fill: currentColor; }
 .tg-scythe .tg-icon {
-  padding: calc(var(--tg-plate) * 0.14);
+  /* Силуэт косы занимает ~90% своего viewBox, ползунки настроек — ~62%: больший отступ уравнивает размер значков. */
+  padding: calc(var(--tg-plate) * 0.2);
 }
 .tg-scythe[aria-pressed="true"] { color: #fff; }
 .tg-scythe[aria-pressed="true"] .tg-blade { fill: #e8f1e4; }
@@ -250,8 +251,13 @@
 .tg-meadow:hover .tg-toggle,
 .tg-meadow.is-flipped .tg-toggle,
 .tg-toggle:focus-visible { opacity: 1; }
+/* Невыбранная коса приглушена как настройки: её сплошное полотно весит больше тонких линий ползунков. */
+.tg-scythe:not([aria-pressed="true"]) { opacity: 0.65; }
+.tg-meadow:hover .tg-scythe,
+.tg-scythe:focus-visible,
+.tg-scythe[aria-pressed="true"] { opacity: 1; }
 @media (pointer: coarse), (hover: none) {
-  .tg-mow, .tg-toggle { opacity: 1; }
+  .tg-mow, .tg-toggle, .tg-scythe:not([aria-pressed="true"]) { opacity: 1; }
 }
 
 /* Обратная сторона: одна строка настроек; справа место под общую кнопку «назад». */
@@ -277,6 +283,14 @@
   height: var(--tg-hit);
 }
 .tg-caption { margin-right: 3px; }
+.tg-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 /* Цель чипа — во всю высоту кнопки, рамка — подложка внутри. */
 .tg-chip {
   position: relative;
@@ -341,7 +355,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 2px;
-  padding: 10px 14px 6px;
+  --tg-pad-x: 14px;
+  padding: 10px var(--tg-pad-x) 6px;
   box-sizing: border-box;
   border: 1px solid var(--tg-line);
   border-radius: 12px;
@@ -491,6 +506,54 @@
   transform: translateX(-50%);
 }
 /* Положение каждой опоры (5 / 15 / 40 / 90) задаёт MeadowTimer: они на равных интервалах. */
+/* Строка заголовка: «Отрастание 40 мин» слева, «поделиться» справа.
+   Значок — лёгкий, без плашки в покое; центр звеньев на оптической оси цифр,
+   их правый край — на правом крае шкалы, разделителя и «Вырастить сейчас».
+   Цель нажатия (26 / 44 px) центрирована на значке и уходит в поле панели. */
+.tg-timer-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+}
+.tg-timer-head .tg-timer-label { min-height: 0; } /* высоту строки держит .tg-timer-head */
+.tg-timer .tg-share {
+  position: static;
+  flex: 0 0 auto;
+  /* Цель доходит до рамки панели, значок прижат к её правому краю: видимый край
+     звена (3.3 px поля внутри 22 px подложки) совпадает с краем содержимого. */
+  justify-content: flex-end;
+  width: max(var(--tg-hit), 24px + var(--tg-pad-x)); /* на ПК цель шире 26 px, чтобы вместить подложку и поле */
+  margin: 0 calc(-1 * var(--tg-pad-x)) 0 0;
+  padding: 0 calc(var(--tg-pad-x) - 3.3px) 0 0;
+  color: var(--tg-soft);
+  transform: translateY(0.5px); /* цифры без выносных ниже центра строки: на их ось */
+}
+.tg-share .tg-icon { flex: 0 0 auto; width: 22px; height: 22px; padding: 2px; background: transparent; }
+.tg-share:hover { color: var(--tg-ink); }
+.tg-share:hover .tg-icon { background: var(--tg-line); }
+/* Запасной путь, только если ни меню, ни буфер не сработали: ссылка на месте заголовка. */
+.tg-share-link {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: calc(var(--tg-hit) / 2 + 16px);
+  z-index: 1;
+  box-sizing: border-box;
+  height: 30px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--ring, var(--tg-accent));
+  border-radius: 7px;
+  font: 500 12px/1 system-ui, -apple-system, sans-serif;
+  color: var(--tg-ink);
+  background: var(--background, #fff);
+  outline: none;
+  transform: translateY(-50%);
+}
 .tg-timer-scale span.is-current { color: var(--tg-ink); font-weight: 650; }
 
 @media (prefers-color-scheme: dark) {
@@ -499,7 +562,7 @@
 :root.dark .tg-timer, [data-theme="dark"] .tg-timer { --tg-accent: #79b765; }
 :root.light .tg-timer, [data-theme="light"] .tg-timer { --tg-accent: #4f8a3f; }
 @media (max-width: 360px) {
-  .tg-timer { padding: 8px 10px 4px; }
+  .tg-timer { --tg-pad-x: 10px; padding: 8px var(--tg-pad-x) 4px; }
   .tg-timer-label { gap: 5px; font-size: 12px; }
   .tg-timer-value { font-size: 14px; }
   .tg-timer-status { padding: 3px 8px; gap: 4px; }

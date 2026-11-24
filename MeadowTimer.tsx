@@ -1,5 +1,6 @@
 import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { copy } from "./meadow-copy";
+import { ShareButton } from "./ShareButton";
 import { anchorShare, minutesForKey, minutesFromInput, minutesToUnits, REGROW_ANCHORS, REGROW_MIN, REGROW_MAX, SCALE_UNITS } from "./regrow-scale";
 import type { MeadowCardState } from "./useMeadowCard";
 
@@ -65,10 +66,14 @@ export function MeadowTimer({ ui, onGrowNow }: { ui: MeadowCardState; onGrowNow(
 
   return (
     <div className="tg-timer tg-control" role="group" aria-labelledby={`${id}-label`}>
-      <label id={`${id}-label`} htmlFor={`${id}-range`} className="tg-timer-label">
+      {/* Заголовок и «поделиться» — одна строка: значок по центру заголовка, у правого края шкалы. */}
+      <div className="tg-timer-head">
+        <label id={`${id}-label`} htmlFor={`${id}-range`} className="tg-timer-label">
         {copy.regrowth}
-        <output htmlFor={`${id}-range`} className="tg-timer-value">{minutes} {copy.mins}</output>
-      </label>
+          <output htmlFor={`${id}-range`} className="tg-timer-value">{minutes} {copy.mins}</output>
+        </label>
+        <ShareButton />
+      </div>
       <div className="tg-timer-track">
         <input
           id={`${id}-range`}

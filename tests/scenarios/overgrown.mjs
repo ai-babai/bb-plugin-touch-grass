@@ -93,8 +93,13 @@ export default [
           assert.ok(box.width >= 44 && box.height >= 44);
           assert.ok(box.x >= panel.x && box.x + box.width <= panel.x + panel.width + 1);
         }
-        boxes.sort((a, b) => a.x - b.x);
-        for (let i = 1; i < boxes.length; i++) assert.ok(boxes[i].x >= boxes[i - 1].x + boxes[i - 1].width - 1);
+        for (const [index, a] of boxes.entries()) {
+          for (const b of boxes.slice(index + 1)) {
+            const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+            const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+            assert.ok(overlapX <= 1 || overlapY <= 1, "settings controls have separate touch targets");
+          }
+        }
         await m.page.getByRole("button", { name: /заросли/i }).tap();
         await m.toggle.tap();
         await ageMeadow(m, 41);
