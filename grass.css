@@ -356,7 +356,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   --tg-pad-x: 14px;
-  padding: 10px var(--tg-pad-x) 6px;
+  padding: 6px var(--tg-pad-x) 6px;
   box-sizing: border-box;
   border: 1px solid var(--tg-line);
   border-radius: 12px;
@@ -401,7 +401,14 @@
 }
 .tg-grow-now:hover { background: #39672e; }
 .tg-grow-now:focus-visible { outline: 2px solid var(--ring, var(--tg-accent)); outline-offset: 2px; }
+/* Верхнее поле — по оси цели «поделиться»: на сенсоре она 44 px и сама даёт воздух,
+   поэтому начинается от рамки; на ПК шкала мышью не требует 44 px высоты. */
+@media (pointer: coarse), (hover: none) {
+  .tg-timer.tg-timer { padding-top: 0; gap: 1px; } /* 1 px: цель «поделиться» не касается шкалы */
+}
 @media (pointer: fine) {
+  .tg-timer .tg-range { height: 32px; }
+  .tg-timer .tg-timer-scale { margin-top: -2px; } /* метки на прежнем расстоянии от дорожки */
   .tg-grow-now { flex: 0 0 auto; min-height: 32px; }
   .tg-timer-foot { min-height: 34px; }
 }
@@ -562,7 +569,7 @@
 :root.dark .tg-timer, [data-theme="dark"] .tg-timer { --tg-accent: #79b765; }
 :root.light .tg-timer, [data-theme="light"] .tg-timer { --tg-accent: #4f8a3f; }
 @media (max-width: 360px) {
-  .tg-timer { --tg-pad-x: 10px; padding: 8px var(--tg-pad-x) 4px; }
+  .tg-timer { --tg-pad-x: 10px; padding: 6px var(--tg-pad-x) 4px; }
   .tg-timer-label { gap: 5px; font-size: 12px; }
   .tg-timer-value { font-size: 14px; }
   .tg-timer-status { padding: 3px 8px; gap: 4px; }
